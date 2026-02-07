@@ -1,0 +1,31 @@
+import { cn } from "@/lib/utils";
+
+interface SpinnerProps {
+    className?: string;
+    size?: 'sm' | 'md' | 'lg';
+}
+
+export function Spinner({ className, size = 'md' }: SpinnerProps) {
+    const sizeClasses = {
+        sm: 'h-4 w-4 border-2',
+        md: 'h-8 w-8 border-b-2',
+        lg: 'h-12 w-12 border-b-4',
+    };
+
+    return (
+        <div className={cn(
+            "animate-spin rounded-full border-primary/30 border-t-primary",
+            sizeClasses[size],
+            className
+        )}></div>
+    );
+}
+
+export function LoadingPage() {
+    return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
+            <Spinner size="lg" />
+            <p className="mt-4 text-gray-600 font-medium">Cargando LockIn...</p>
+        </div>
+    );
+}

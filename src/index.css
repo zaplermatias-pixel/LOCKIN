@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@theme {
+    --color-primary: #3A4D1A;
+    --color-accent: #8D3B1A;
+    --color-sand: #E3D5CA;
+    --color-earth-bg: #F5EBE0;
+}
+
+@layer base {
+    body {
+        @apply bg-earth-bg text-[#2D3A18] antialiased;
+        font-feature-settings: "ss01", "ss02", "cv01", "cv02";
+    }
+}
+
+@layer utilities {
+    .glass-earth {
+        @apply bg-sand/30 backdrop-blur-md border border-white/20;
+    }
+
+    .card-earth {
+        @apply bg-sand/40 border border-[#D5C5B5] shadow-sm hover:shadow-md transition-all duration-300;
+    }
+}

@@ -1,0 +1,148 @@
+import { formatDistanceToNow } from 'date-fns';
+import { es } from 'date-fns/locale';
+import {
+    MessageCircle,
+    Share2,
+    Lock,
+    Music,
+    MapPin,
+    Flame,
+    Zap,
+    Trophy
+} from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import type { WorkoutWithDetails } from '@/types/database.types';
+
+interface WorkoutCardProps {
+    workout: WorkoutWithDetails;
+    isLocked: boolean;
+}
+
+export function WorkoutCard({ workout, isLocked }: WorkoutCardProps) {
+    const mainMedia = workout.workout_media?.[0]?.media_url;
+    const hasMultipleMedia = (workout.workout_media?.length || 0) > 1;
+
+    return (
+        <Card className="overflow-hidden border-none shadow-xl bg-white/70 backdrop-blur-sm rounded-[2.5rem] mb-8 ring-1 ring-sand/50">
+            {/* Header */}
+            <CardHeader className="p-5 flex flex-row items-center justify-between space-y-0">
+                <div className="flex items-center gap-3">
+                    <Avatar className="h-11 w-11 border-2 border-primary/10 shadow-sm">
+                        <AvatarImage src={workout.users?.profile_picture_url || ''} />
+                        <AvatarFallback className="bg-primary/5 text-primary text-xs font-black italic">
+                            {workout.users?.username?.[0]?.toUpperCase()}
+                        </AvatarFallback>
+                    </Avatar>
+                    <div>
+                        <div className="flex items-center gap-1.5">
+                            <span className="font-black text-sm text-primary italic uppercase tracking-tighter">{workout.users?.display_name}</span>
+                            <span className="text-primary/30 text-[10px] font-bold uppercase tracking-widest">@{workout.users?.username}</span>
+                        </div>
+                        <p className="text-[10px] text-primary/40 font-bold uppercase tracking-widest mt-0.5">
+                            {formatDistanceToNow(new Date(workout.created_at), { addSuffix: true, locale: es })}
+                        </p>
+                    </div>
+                </div>
+
+                {workout.activity_type && (
+                    <div className="bg-primary text-white px-4 py-1.5 rounded-2xl flex items-center gap-2 shadow-lg shadow-primary/20">
+                        <span className="text-[10px] font-black uppercase italic tracking-wider">
+                            {workout.activity_type === 'gym' ? '💪 Gym' :
+                                workout.activity_type === 'run' ? '🏃 Run' :
+                                    workout.activity_type === 'bike' ? '🚴 Bike' :
+                                        workout.activity_type === 'swim' ? '🏊 Swim' :
+                                            workout.activity_type === 'yoga' ? '🧘 Yoga' :
+                                                workout.activity_type === 'crossfit' ? '🔥 Crossfit' : '✨ Activity'}
+                        </span>
+                    </div>
+                )}
+            </CardHeader>
+
+            {/* Media Content */}
+            <div className="relative aspect-[4/5] bg-sand/20 group mx-2 rounded-[2rem] overflow-hidden shadow-inner">
+                {isLocked ? (
+                    <div className="absolute inset-0 z-10 backdrop-blur-3xl bg-primary/20 flex flex-col items-center justify-center text-primary p-8 text-center">
+                        <div className="bg-white/40 p-5 rounded-3xl mb-4 shadow-xl">
+                            <Lock className="h-10 w-10 text-primary fill-primary/10" />
+                        </div>
+                        <h3 className="text-2xl font-black mb-2 uppercase italic tracking-tighter">🔒 BLOQUEADO</h3>
+                        <p className="text-sm font-bold opacity-70 max-w-[220px] leading-snug">Publica tu sesión de hoy para desbloquear el feed de tus amigos.</p>
+                    </div>
+                ) : (
+                    mainMedia && (
+                        <img
+                            src={mainMedia}
+                            alt="Workout"
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        />
+                    )
+                )}
+
+                {!isLocked && hasMultipleMedia && (
+                    <div className="absolute top-4 right-4 bg-black/40 text-white text-[10px] font-bold px-3 py-1.5 rounded-full backdrop-blur-md border border-white/10 uppercase tracking-widest">
+                        {workout.workout_media.length} Archivos
+                    </div>
+                )}
+
+                {/* Overlays for Music or Stats */}
+                {!isLocked && workout.song_name && (
+                    <div className="absolute bottom-4 left-4 right-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="bg-earth-bg/60 backdrop-blur-xl border border-white/40 rounded-3xl p-4 flex items-center gap-4 text-primary shadow-2xl">
+                            <div className="bg-primary p-3 rounded-2xl animate-pulse-slow shadow-lg shadow-primary/10">
+                                <Music className="h-5 w-5 text-white fill-current" />
+                            </div>
+                            <div className="overflow-hidden">
+                                <p className="text-[11px] font-black uppercase italic tracking-tighter truncate leading-none mb-1">{workout.song_name}</p>
+                                <p className="text-[10px] font-bold opacity-60 truncate uppercase tracking-widest">{workout.song_artist}</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Description & Muscles */}
+            <CardContent className="p-6 space-y-5">
+                {workout.description && !isLocked && (
+                    <p className="text-sm text-primary/80 font-bold leading-relaxed italic">
+                        "{workout.description}"
+                    </p>
+                )}
+
+                {!isLocked && workout.workout_muscles && workout.workout_muscles.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                        {workout.workout_muscles.map((m, i) => (
+                            <span key={i} className="bg-primary/5 text-primary text-[10px] font-black px-4 py-1.5 rounded-xl border border-primary/10 uppercase tracking-widest shadow-sm">
+                                {m.muscle_group}
+                            </span>
+                        ))}
+                    </div>
+                )}
+            </CardContent>
+
+            {/* Footer Actions */}
+            <CardFooter className="p-6 pt-0 flex items-center gap-4">
+                <Button variant="ghost" size="sm" className="rounded-2xl gap-2 px-6 h-12 bg-primary/5 hover:bg-primary hover:text-white text-primary transition-all font-black uppercase italic tracking-tighter flex-1 shadow-sm">
+                    <MessageCircle className="h-4 w-4" />
+                    <span>Motivar</span>
+                </Button>
+                <Button variant="ghost" size="icon" className="rounded-2xl h-12 w-12 bg-accent/5 hover:bg-accent hover:text-white text-accent transition-all shadow-sm">
+                    <Share2 className="h-5 w-5" />
+                </Button>
+            </CardFooter>
+        </Card>
+    );
+}
+
+const style = document.createElement('style');
+style.innerHTML = `
+  @keyframes pulse-slow {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.05); opacity: 0.9; }
+  }
+  .animate-pulse-slow {
+    animation: pulse-slow 3s infinite ease-in-out;
+  }
+`;
+document.head.appendChild(style);

@@ -60,6 +60,24 @@ export type Friendship = {
     updated_at: string;
 };
 
+export type Group = {
+    id: string;
+    name: string;
+    description: string | null;
+    image_url: string | null;
+    created_by: string;
+    created_at: string;
+    is_private: boolean;
+};
+
+export type GroupMember = {
+    id: string;
+    group_id: string;
+    user_id: string;
+    role: 'admin' | 'member';
+    joined_at: string;
+};
+
 export type Comment = {
     id: string;
     workout_id: string;

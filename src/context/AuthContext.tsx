@@ -24,9 +24,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         let mounted = true;
 
         // Escuchar cambios en la sesión (incluye carga inicial)
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (!mounted) return;
-
+            console.log('AuthContext: [EVENT]', event, session?.user?.id);
             setSession(session);
 
             if (session?.user) {
@@ -124,33 +124,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const signUp = async (email: string, password: string, username: string, displayName: string) => {
         try {
-            // 1. Registro en Supabase Auth
+            // 1. Registro en Supabase Auth con Metadata
+            // El trigger 'on_auth_user_created' se encargará de crear el perfil en 'public.users'
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email,
                 password,
+                options: {
+                    data: {
+                        username,
+                        display_name: displayName,
+                    }
+                }
             });
 
             if (authError) throw authError;
             if (!authData.user) throw new Error('No user data returned from sign up');
 
-            // 2. Crear perfil en la tabla 'users'
-            const { error: profileError } = await supabase
-                .from('users')
-                .insert([
-                    {
-                        id: authData.user.id,
-                        email,
-                        username,
-                        display_name: displayName,
-                        account_type: 'public',
-                        current_streak: 0,
-                        total_workouts: 0,
-                    }
-                ]);
-
-            if (profileError) throw profileError;
+            // No insertamos manualmente en 'users' aquí. Lo hace el Trigger.
 
         } catch (error: any) {
+            console.error('AuthContext: SignUp error:', error);
             throw error;
         }
     };
@@ -171,10 +164,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
             const { error } = await supabase.auth.signOut();
             if (error) throw error;
+        } catch (error: any) {
+            console.error('Error signing out:', error);
+        } finally {
+            // Force local state cleanup independent of auth listener
             setUser(null);
             setSession(null);
-        } catch (error: any) {
-            throw error;
+            setLoading(false);
         }
     };
 

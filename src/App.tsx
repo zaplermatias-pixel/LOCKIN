@@ -7,11 +7,14 @@ import { Profile } from '@/pages/Profile';
 import { Settings } from '@/pages/Settings';
 import { NewWorkout } from '@/pages/NewWorkout';
 import { Feed } from '@/pages/Feed';
+import { Onboarding } from '@/pages/Onboarding';
 
 // Páginas temporales (Placeholders)
-const Search = () => <div className="p-4"><h1 className="text-2xl font-bold">Buscar</h1></div>;
-const Groups = () => <div className="p-4"><h1 className="text-2xl font-bold">Grupos</h1></div>;
-const Messages = () => <div className="p-4"><h1 className="text-2xl font-bold">Mensajes</h1></div>;
+import { Search } from '@/pages/Search';
+import { Groups } from '@/pages/Groups';
+import { GroupDetails } from '@/pages/GroupDetails';
+import { Messages } from '@/pages/Messages';
+import { Chat } from '@/pages/Chat';
 
 export default function App() {
   return (
@@ -24,12 +27,15 @@ export default function App() {
 
       {/* Rutas Protegidas */}
       <Route element={<ProtectedRoute />}>
+        <Route path="/onboarding" element={<Onboarding />} />
         <Route element={<AppLayout />}>
           <Route path="/feed" element={<Feed />} />
           <Route path="/search" element={<Search />} />
           <Route path="/new-workout" element={<NewWorkout />} />
           <Route path="/groups" element={<Groups />} />
+          <Route path="/groups/:groupId" element={<GroupDetails />} />
           <Route path="/messages" element={<Messages />} />
+          <Route path="/messages/:userId" element={<Chat />} />
           <Route path="/profile/:id" element={<Profile />} />
           <Route path="/settings" element={<Settings />} />
         </Route>

@@ -1,16 +1,20 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
+import { useWorkouts } from '@/hooks/useWorkouts';
 import { useParams } from 'react-router-dom';
 import {
     Settings,
-    Calendar,
+    Calendar as CalendarIcon,
     Trophy,
     Dumbbell,
     Users as UsersIcon,
-    X
+    X,
+    MessageSquare
 } from 'lucide-react';
+import { Calendar as WorkoutCalendar } from '@/components/calendar/Calendar';
 import { Button } from '@/components/ui/button';
+import { FollowButton } from '@/components/users/FollowButton';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Spinner } from '@/components/ui/spinner';
@@ -20,9 +24,10 @@ import { es } from 'date-fns/locale';
 export function Profile() {
     const { id } = useParams<{ id: string }>();
     const { user: currentUser } = useAuth();
-    const { profile, loading, error } = useProfile(id);
+    const { profile, loading, error, refetch } = useProfile(id);
     const navigate = useNavigate();
 
+    const { workouts, loading: workoutsLoading } = useWorkouts(id);
     const isOwnProfile = currentUser?.id === id;
 
     if (loading) {
@@ -43,7 +48,7 @@ export function Profile() {
                 <h3 className="text-xl font-black uppercase italic tracking-tighter text-primary">Usuario no encontrado</h3>
                 <p className="text-sm font-bold text-primary/40 mt-2">No pudimos cargar el perfil con ID: <span className="text-accent">{id}</span></p>
                 <div className="mt-8 flex flex-col gap-3 max-w-xs mx-auto">
-                    <Button onClick={() => window.location.reload()} className="rounded-2xl font-black uppercase italic bg-primary">Reintentar</Button>
+                    <Button onClick={() => refetch()} className="rounded-2xl font-black uppercase italic bg-primary">Reintentar</Button>
                     <Button variant="ghost" onClick={() => navigate('/feed')} className="rounded-2xl font-black uppercase italic text-primary/60">Volver al feed</Button>
                 </div>
             </div>
@@ -51,7 +56,7 @@ export function Profile() {
     }
 
     const stats = [
-        { label: 'Workouts', value: profile.total_workouts || 0, icon: Dumbbell },
+        { label: 'Workouts', value: profile.total_workouts || workouts.length || 0, icon: Dumbbell },
         { label: 'Streak', value: `${profile.current_streak || 0}d`, icon: Trophy },
         { label: 'Grupos', value: 0, icon: UsersIcon }, // Placeholder
     ];
@@ -64,10 +69,10 @@ export function Profile() {
                 <CardContent className="relative pt-0 pb-6 px-4 sm:px-6">
                     <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between -mt-12 gap-4">
                         <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 text-center sm:text-left">
-                            <Avatar key={currentUser?.profile_picture_url} className="h-32 w-32 border-2 border-primary/10 shadow-sm transition-opacity group-hover:opacity-80">
-                                <AvatarImage src={currentUser?.profile_picture_url || ''} />
+                            <Avatar key={profile.profile_picture_url || 'default'} className="h-32 w-32 border-2 border-primary/10 shadow-sm transition-opacity group-hover:opacity-80">
+                                <AvatarImage src={profile.profile_picture_url || ''} />
                                 <AvatarFallback className="text-4xl bg-primary/5 text-primary">
-                                    {currentUser?.display_name?.[0]?.toUpperCase()}
+                                    {profile.display_name?.[0]?.toUpperCase()}
                                 </AvatarFallback>
                             </Avatar>
                             <div className="mb-1">
@@ -82,7 +87,15 @@ export function Profile() {
                                 Editar Perfil
                             </Button>
                         ) : (
-                            <Button className="w-full sm:w-auto">Seguir</Button>
+                            <div className="flex gap-2 w-full sm:w-auto">
+                                <FollowButton targetUserId={id!} className="flex-1 sm:w-auto px-8" />
+                                <Button
+                                    onClick={() => navigate(`/messages/${id}`)}
+                                    className="bg-primary/10 text-primary hover:bg-primary/20 rounded-2xl shadow-none"
+                                >
+                                    <MessageSquare className="h-4 w-4" />
+                                </Button>
+                            </div>
                         )}
                     </div>
 
@@ -95,7 +108,7 @@ export function Profile() {
 
                         <div className="flex flex-wrap justify-center sm:justify-start gap-4 text-sm text-gray-500">
                             <div className="flex items-center gap-1">
-                                <Calendar className="h-4 w-4" />
+                                <CalendarIcon className="h-4 w-4" />
                                 <span>Se unió en {format(new Date(profile.created_at), 'MMMM yyyy', { locale: es })}</span>
                             </div>
                             {/* Future: location etc. */}
@@ -119,15 +132,20 @@ export function Profile() {
                 ))}
             </div>
 
-            {/* Activity Sections Placeholder */}
+            {/* Calendar Section */}
             <div className="space-y-4">
-                <h2 className="text-lg font-bold px-1">Actividad Reciente</h2>
-                <Card className="border-dashed border-2 bg-transparent">
-                    <CardContent className="p-8 text-center text-gray-400">
-                        <Dumbbell className="h-10 w-10 mx-auto mb-2 opacity-20" />
-                        <p>Aún no hay entrenamientos publicados.</p>
-                    </CardContent>
-                </Card>
+                <h2 className="text-lg font-bold px-1 flex items-center gap-2">
+                    <CalendarIcon className="h-5 w-5 text-primary" />
+                    Historial de Actividad
+                </h2>
+
+                {workoutsLoading ? (
+                    <div className="h-64 bg-gray-50 rounded-3xl flex items-center justify-center">
+                        <Spinner />
+                    </div>
+                ) : (
+                    <WorkoutCalendar workouts={workouts} />
+                )}
             </div>
         </div>
     );

@@ -143,10 +143,10 @@ export function Settings() {
                     </CardHeader>
                     <CardContent className="flex flex-col items-center gap-4">
                         <div className="relative group">
-                            <Avatar className="h-32 w-32 border-2 border-primary/10 shadow-sm transition-opacity group-hover:opacity-80">
+                            <Avatar key={user?.profile_picture_url || 'settings-avatar'} className="h-32 w-32 border-2 border-primary/10 shadow-sm transition-opacity group-hover:opacity-80">
                                 <AvatarImage src={user?.profile_picture_url || ''} />
                                 <AvatarFallback className="text-4xl bg-primary/5 text-primary">
-                                    {user?.display_name?.[0]?.toUpperCase()}
+                                    {(user?.display_name?.[0] || 'U').toUpperCase()}
                                 </AvatarFallback>
                             </Avatar>
                             <button

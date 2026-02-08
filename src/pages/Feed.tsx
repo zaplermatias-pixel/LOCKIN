@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useFeed } from '@/hooks/useFeed';
 import { WorkoutCard } from '@/components/workouts/WorkoutCard';
@@ -18,12 +17,14 @@ import {
 
 export function Feed() {
     const navigate = useNavigate();
-    const { user, session } = useAuth();
     const { workouts, loading, hasWorkedOutToday, error, refetch } = useFeed();
 
     useEffect(() => {
-        refetch();
-    }, [refetch]);
+        const load = async () => {
+            await refetch();
+        };
+        load();
+    }, []); // Run once on mount
 
     if (loading && workouts.length === 0) {
         return (

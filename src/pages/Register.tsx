@@ -53,7 +53,7 @@ export function Register() {
             }
 
             await signUp(data.email, data.password, data.username, data.displayName);
-            navigate('/feed');
+            navigate('/onboarding');
         } catch (error: any) {
             console.error(error);
             setError(error.message || 'Error al crear la cuenta');

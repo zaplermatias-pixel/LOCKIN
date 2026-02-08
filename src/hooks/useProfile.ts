@@ -1,49 +1,39 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@/types/database.types';
 
 export function useProfile(userId?: string) {
-    const [profile, setProfile] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<Error | null>(null);
+    const queryClient = useQueryClient();
 
-    const fetchProfile = useCallback(async (id: string) => {
-        try {
-            setLoading(true);
-            setError(null);
-            console.log('useProfile: Starting fetch for user ID:', id); // Added log
+    const { data: profile, isLoading: loading, error } = useQuery({
+        queryKey: ['profile', userId],
+        queryFn: async () => {
+            console.log('useProfile: Fetching profile for:', userId);
+            if (!userId) return null;
 
-            const { data, error: fetchError } = await supabase
+            const { data, error } = await supabase
                 .from('users')
                 .select('*')
-                .eq('id', id)
+                .eq('id', userId)
                 .single();
 
-            if (fetchError) {
-                console.error('useProfile: Error fetching profile for ID:', id, fetchError); // Added log
-                throw fetchError;
-            }
-            setProfile(data as User);
-            console.log('useProfile: Profile fetched successfully for ID:', id, data); // Added log
-        } catch (e: any) {
-            console.error('useProfile error:', e);
-            setError(e);
-            setProfile(null);
-        } finally {
-            setLoading(false);
-            console.log('useProfile: Fetch operation completed for ID:', id); // Added log
-        }
-    }, []);
+            if (error) throw error;
+            return data as User;
+        },
+        enabled: !!userId && userId !== 'undefined',
+        staleTime: 1000 * 60 * 2, // 2 minutos de caché fresco
+    });
 
-    useEffect(() => {
-        console.log('useProfile: useEffect triggered with userId:', userId);
-        if (!userId || userId === 'undefined') {
-            console.log('useProfile: No valid userId, stopping loading');
-            setLoading(false);
-            return;
-        }
-        fetchProfile(userId);
-    }, [userId, fetchProfile]);
+    // Función para invalidar/recargar manualmente
+    const refetch = useCallback(() => {
+        return queryClient.invalidateQueries({ queryKey: ['profile', userId] });
+    }, [queryClient, userId]);
 
-    return { profile, loading, error, refetch: () => userId && fetchProfile(userId) };
+    return {
+        profile: profile ?? null,
+        loading,
+        error: error as Error | null,
+        refetch
+    };
 }

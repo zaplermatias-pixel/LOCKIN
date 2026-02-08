@@ -43,7 +43,7 @@ const MUSCLE_GROUPS = [
 
 export function NewWorkout() {
     const navigate = useNavigate();
-    const { createWorkout, checkHasWorkedOutToday, loading: submitting } = useWorkouts();
+    const { createWorkout, checkHasWorkedOutToday, isCreating: submitting } = useWorkouts();
 
     // States
     const [loading, setLoading] = useState(true);
@@ -107,16 +107,16 @@ export function NewWorkout() {
         }
 
         try {
-            await createWorkout(
-                {
+            await createWorkout({
+                workoutData: {
                     description,
                     activity_type: selectedActivity as any,
                     song_name: songName || null,
                     song_artist: songArtist || null,
                 },
-                selectedMuscles,
+                muscleGroups: selectedMuscles,
                 mediaFiles
-            );
+            });
             navigate('/feed');
         } catch (err: any) {
             setError(err.message || 'Error al publicar el entrenamiento');

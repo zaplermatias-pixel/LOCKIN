@@ -1,131 +1,137 @@
-import { useState } from 'react';
+import { useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import type { Workout } from '@/types/database.types';
 import { useAuth } from '@/context/AuthContext';
-import type { Workout, WorkoutMedia } from '@/types/database.types';
 
-type WorkoutInsert = Omit<Workout, 'id' | 'created_at' | 'is_deleted'>;
-type WorkoutMediaInsert = Omit<WorkoutMedia, 'id' | 'created_at' | 'thumbnail_url'>;
-
-export function useWorkouts() {
+export function useWorkouts(userId?: string) {
     const { user } = useAuth();
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const queryClient = useQueryClient();
+    const targetUserId = userId || user?.id;
 
+    // Fetch Workouts
+    const { data: workouts, isLoading: loading, error } = useQuery({
+        queryKey: ['workouts', targetUserId],
+        queryFn: async () => {
+            if (!targetUserId) return [];
+
+            const { data, error } = await supabase
+                .from('workouts')
+                .select('*')
+                .eq('user_id', targetUserId)
+                .order('workout_date', { ascending: false });
+
+            if (error) throw error;
+            return data as Workout[];
+        },
+        enabled: !!targetUserId,
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+
+    // Check if user has worked out today
     const checkHasWorkedOutToday = async () => {
         if (!user) return false;
-
         const today = new Date().toISOString().split('T')[0];
 
-        const { data, error } = await supabase
+        const { count, error } = await supabase
             .from('workouts')
-            .select('id')
+            .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
-            .eq('workout_date', today)
-            .eq('is_deleted', false)
-            .maybeSingle();
+            .eq('workout_date', today);
 
         if (error) {
-            console.error('Error checking today\'s workout:', error);
+            console.error('Error checking daily status:', error);
             return false;
         }
 
-        return !!data;
+        return (count || 0) > 0;
     };
 
-    const createWorkout = async (
-        workoutData: Partial<Workout>,
-        muscles: string[],
-        mediaFiles: File[]
-    ) => {
-        if (!user) throw new Error('User not authenticated');
+    // Create Workout Mutation
+    const createWorkoutMutation = useMutation({
+        mutationFn: async (vars: {
+            workoutData: Partial<Workout>,
+            muscleGroups: string[],
+            mediaFiles: File[]
+        }) => {
+            if (!user) throw new Error('Usuario no autenticado');
 
-        setLoading(true);
-        setError(null);
-
-        try {
             const today = new Date().toISOString().split('T')[0];
 
-            // 1. Verificar si ya publicó hoy
-            const hasWorkedOut = await checkHasWorkedOutToday();
-            if (hasWorkedOut) {
-                throw new Error('Ya has publicado un entrenamiento hoy. ¡Vuelve mañana!');
-            }
-
-            // 2. Crear el registro del entrenamiento
+            // 1. Crear el workout
             const { data: workout, error: workoutError } = await supabase
                 .from('workouts')
                 .insert({
                     user_id: user.id,
                     workout_date: today,
-                    ...workoutData
+                    ...vars.workoutData
                 })
                 .select()
                 .single();
 
             if (workoutError) throw workoutError;
+            if (!workout) throw new Error('No se pudo crear el entrenamiento');
 
-            // 3. Insertar músculos
-            if (muscles.length > 0) {
-                const muscleEntries = muscles.map(muscle => ({
+            // 2. Subir imágenes (Paralelo)
+            const uploadPromises = vars.mediaFiles.map(async (file, index) => {
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${workout.id}/${index}_${Date.now()}.${fileExt}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('workouts')
+                    .upload(fileName, file);
+
+                if (uploadError) throw uploadError;
+
+                // URL pública
+                const { data: { publicUrl } } = supabase.storage
+                    .from('workouts')
+                    .getPublicUrl(fileName);
+
+                // Insertar en workout_media
+                await supabase.from('workout_media').insert({
                     workout_id: workout.id,
-                    muscle_group: muscle as any
+                    media_type: file.type.startsWith('video') ? 'video' : 'photo',
+                    media_url: publicUrl,
+                    order_index: index
+                });
+            });
+
+            await Promise.all(uploadPromises);
+
+            // 3. Insertar músculos (Paralelo)
+            if (vars.muscleGroups.length > 0) {
+                const muscleInserts = vars.muscleGroups.map(muscle => ({
+                    workout_id: workout.id,
+                    muscle_group: muscle
                 }));
 
                 const { error: muscleError } = await supabase
                     .from('workout_muscles')
-                    .insert(muscleEntries);
+                    .insert(muscleInserts);
 
                 if (muscleError) throw muscleError;
             }
 
-            // 4. Subir media y registrar URLs
-            if (mediaFiles.length > 0) {
-                const mediaPromises = mediaFiles.map(async (file, index) => {
-                    const fileExt = file.name.split('.').pop();
-                    const fileName = `${workout.id}/${index}-${Math.random()}.${fileExt}`;
-                    const filePath = fileName;
-
-                    const { error: uploadError } = await supabase.storage
-                        .from('workouts-media')
-                        .upload(filePath, file);
-
-                    if (uploadError) throw uploadError;
-
-                    const { data: { publicUrl } } = supabase.storage
-                        .from('workouts-media')
-                        .getPublicUrl(filePath);
-
-                    return {
-                        workout_id: workout.id,
-                        media_type: file.type.startsWith('video/') ? 'video' : 'photo',
-                        media_url: publicUrl,
-                        order_index: index
-                    } as WorkoutMedia;
-                });
-
-                const mediaEntries = await Promise.all(mediaPromises);
-
-                const { error: mediaError } = await supabase
-                    .from('workout_media')
-                    .insert(mediaEntries);
-
-                if (mediaError) throw mediaError;
-            }
-
             return workout;
-        } catch (err: any) {
-            console.error('Error creating workout:', err);
-            setError(err.message || 'Error al crear el entrenamiento');
-            throw err;
-        } finally {
-            setLoading(false);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['workouts'] });
+            queryClient.invalidateQueries({ queryKey: ['profile'] }); // Actualizar contadores
         }
-    };
+    });
+
+    const refetch = useCallback(() => {
+        return queryClient.invalidateQueries({ queryKey: ['workouts', targetUserId] });
+    }, [queryClient, targetUserId]);
 
     return {
-        createWorkout,
-        checkHasWorkedOutToday,
+        workouts: workouts ?? [],
         loading,
-        error
+        error,
+        refetch,
+        createWorkout: createWorkoutMutation.mutateAsync,
+        checkHasWorkedOutToday,
+        isCreating: createWorkoutMutation.isPending
     };
 }

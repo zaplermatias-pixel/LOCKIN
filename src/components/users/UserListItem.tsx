@@ -1,6 +1,5 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { UserPlus, UserCheck } from 'lucide-react';
+import { FollowButton } from './FollowButton';
 import type { User } from '@/types/database.types';
 import { useNavigate } from 'react-router-dom';
 
@@ -15,24 +14,28 @@ export function UserListItem({ user, action }: UserListItemProps) {
     return (
         <div
             onClick={() => navigate(`/profile/${user.id}`)}
-            className="flex items-center justify-between p-3 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
+            className="flex items-center justify-between p-4 rounded-3xl bg-white/60 dark:bg-dark-card/30 border border-sand/30 dark:border-white/10 shadow-sm hover:shadow-md transition-all cursor-pointer group hover:bg-primary/5 dark:hover:bg-beige/5"
         >
-            <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10 border border-gray-200">
+            <div className="flex items-center gap-4">
+                <Avatar className="h-12 w-12 border-2 border-white dark:border-dark-surface shadow-md ring-2 ring-primary/5 dark:ring-beige/5">
                     <AvatarImage src={user.profile_picture_url || ''} />
-                    <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                    <AvatarFallback className="bg-primary/10 dark:bg-beige/10 text-primary dark:text-beige font-black italic">
                         {user.username?.[0]?.toUpperCase()}
                     </AvatarFallback>
                 </Avatar>
                 <div>
-                    <p className="font-bold text-sm text-gray-900 leading-none mb-1">{user.display_name}</p>
-                    <p className="text-xs text-gray-500 font-medium">@{user.username}</p>
+                    <p className="font-black text-sm text-primary dark:text-beige leading-none mb-1 uppercase italic tracking-tight">{user.display_name}</p>
+                    <p className="text-[10px] text-primary/40 dark:text-beige/40 font-bold uppercase tracking-widest">@{user.username}</p>
                 </div>
             </div>
 
-            {action && (
+            {action ? (
                 <div onClick={(e) => e.stopPropagation()}>
                     {action}
+                </div>
+            ) : (
+                <div onClick={(e) => e.stopPropagation()}>
+                    <FollowButton targetUserId={user.id} />
                 </div>
             )}
         </div>

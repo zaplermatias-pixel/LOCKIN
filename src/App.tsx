@@ -15,6 +15,7 @@ import { Groups } from '@/pages/Groups';
 import { GroupDetails } from '@/pages/GroupDetails';
 import { Messages } from '@/pages/Messages';
 import { Chat } from '@/pages/Chat';
+import { WorkoutDetail } from '@/pages/WorkoutDetail';
 
 export default function App() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="/messages" element={<Messages />} />
           <Route path="/messages/:userId" element={<Chat />} />
           <Route path="/profile/:id" element={<Profile />} />
+          <Route path="/workout/:id" element={<WorkoutDetail />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
       </Route>

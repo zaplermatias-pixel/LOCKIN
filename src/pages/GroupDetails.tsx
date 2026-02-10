@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState, useRef } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useGroupDetails } from '@/hooks/useGroupDetails';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -16,14 +16,19 @@ import { Input } from '@/components/ui/input';
 export function GroupDetails() {
     const { user } = useAuth();
     const { groupId } = useParams<{ groupId: string }>();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const initialTab = searchParams.get('tab') || 'activity';
+
     const navigate = useNavigate();
     const { group, members, activity, loading, fetchDetails } = useGroupDetails(groupId || '');
     const [isInviteOpen, setIsInviteOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [groupMessage, setGroupMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
+    const [activeTab, setActiveTab] = useState(initialTab);
+    const scrollRef = useRef<HTMLDivElement>(null);
 
-    const { messages, loading: messagesLoading, fetchMessages, sendGroupMessage } = useGroupMessages(groupId || '');
+    const { messages, loading: messagesLoading, fetchMessages, sendGroupMessage, markAsRead } = useGroupMessages(groupId || '');
 
     const isAdmin = members.find(m => m.user_id === user?.id)?.role === 'admin';
 
@@ -31,6 +36,18 @@ export function GroupDetails() {
         fetchDetails();
         fetchMessages();
     }, [fetchDetails, fetchMessages]);
+
+    // Scroll to bottom on new messages if in chat tab
+    useEffect(() => {
+        if (activeTab === 'chat' && scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+
+            // Mark as read if a new message arrived while we are looking at the chat
+            if (messages.length > 0) {
+                markAsRead(messages[messages.length - 1].id);
+            }
+        }
+    }, [messages, activeTab, markAsRead]);
 
     const handleSendGroupMessage = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -134,18 +151,28 @@ export function GroupDetails() {
 
             {/* Content Tabs */}
             <div className="max-w-md mx-auto px-4 -mt-10 relative z-20">
-                <Tabs defaultValue="activity" className="w-full">
-                    <TabsList className="grid grid-cols-4 bg-white/90 backdrop-blur-xl p-2 h-auto rounded-[2.5rem] shadow-2xl border border-gray-100 mb-10">
-                        <TabsTrigger value="activity" className="rounded-[1.8rem] py-4 text-[9px] font-black italic uppercase tracking-widest gap-2 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg shadow-primary/20 transition-all">
+                <Tabs
+                    value={activeTab}
+                    onValueChange={(val) => {
+                        setActiveTab(val);
+                        setSearchParams({ tab: val });
+                        if (val === 'chat' && messages.length > 0) {
+                            markAsRead(messages[messages.length - 1].id);
+                        }
+                    }}
+                    className="w-full"
+                >
+                    <TabsList className="grid grid-cols-4 bg-white/90 dark:bg-dark-surface/90 backdrop-blur-xl p-2 h-auto rounded-[2.5rem] shadow-2xl border border-gray-100 dark:border-white/10 mb-10 transition-colors">
+                        <TabsTrigger value="activity" className="rounded-[1.8rem] py-4 text-[9px] font-black italic uppercase tracking-widest gap-2 data-[state=active]:bg-primary dark:data-[state=active]:bg-beige data-[state=active]:text-white dark:data-[state=active]:text-dark-bg data-[state=active]:shadow-lg shadow-primary/20 transition-all dark:text-beige/40">
                             <Trophy className="h-3.5 w-3.5" /> Feed
                         </TabsTrigger>
-                        <TabsTrigger value="chat" className="rounded-[1.8rem] py-4 text-[9px] font-black italic uppercase tracking-widest gap-2 data-[state=active]:bg-primary data-[state=active]:text-white transition-all">
+                        <TabsTrigger value="chat" className="rounded-[1.8rem] py-4 text-[9px] font-black italic uppercase tracking-widest gap-2 data-[state=active]:bg-primary dark:data-[state=active]:bg-beige data-[state=active]:text-white dark:data-[state=active]:text-dark-bg transition-all dark:text-beige/40">
                             <MessageSquare className="h-3.5 w-3.5" /> Chat
                         </TabsTrigger>
-                        <TabsTrigger value="members" className="rounded-[1.8rem] py-4 text-[9px] font-black italic uppercase tracking-widest gap-2 data-[state=active]:bg-primary data-[state=active]:text-white">
+                        <TabsTrigger value="members" className="rounded-[1.8rem] py-4 text-[9px] font-black italic uppercase tracking-widest gap-2 data-[state=active]:bg-primary dark:data-[state=active]:bg-beige data-[state=active]:text-white dark:data-[state=active]:text-dark-bg transition-all dark:text-beige/40">
                             <Users className="h-3.5 w-3.5" /> Equipo
                         </TabsTrigger>
-                        <TabsTrigger value="info" className="rounded-[1.8rem] py-4 text-[9px] font-black italic uppercase tracking-widest gap-2 data-[state=active]:bg-primary data-[state=active]:text-white">
+                        <TabsTrigger value="info" className="rounded-[1.8rem] py-4 text-[9px] font-black italic uppercase tracking-widest gap-2 data-[state=active]:bg-primary dark:data-[state=active]:bg-beige data-[state=active]:text-white dark:data-[state=active]:text-dark-bg transition-all dark:text-beige/40">
                             <Info className="h-3.5 w-3.5" /> Info
                         </TabsTrigger>
                     </TabsList>
@@ -157,21 +184,24 @@ export function GroupDetails() {
                                 <WorkoutCard key={workout.id} workout={workout} isLocked={false} />
                             ))
                         ) : (
-                            <div className="text-center py-20 bg-white/50 backdrop-blur-md rounded-[3.5rem] border-4 border-dashed border-sand/30 ring-1 ring-sand/20">
-                                <div className="bg-sand/30 p-8 rounded-[2.5rem] w-24 h-24 flex items-center justify-center mx-auto mb-6 shadow-inner">
-                                    <Trophy className="h-10 w-10 text-primary/20" />
+                            <div className="text-center py-24 bg-white/40 dark:bg-dark-surface/40 backdrop-blur-md rounded-[3rem] border-4 border-dashed border-sand/30 dark:border-white/10 ring-1 ring-sand/20 dark:ring-white/5 transition-colors">
+                                <div className="bg-sand/30 dark:bg-white/5 p-8 rounded-[2.5rem] w-24 h-24 flex items-center justify-center mx-auto mb-6 shadow-inner">
+                                    <Trophy className="h-10 w-10 text-primary/20 dark:text-beige/20" />
                                 </div>
-                                <h3 className="text-2xl font-black uppercase italic tracking-tighter text-primary/40 mb-2">Feed Silencioso</h3>
-                                <p className="text-xs font-bold text-primary/30 max-w-[200px] mx-auto px-4 leading-relaxed">Nadie ha publicado en este Lock-In todavía. ¡Sé el primero!</p>
+                                <h3 className="text-2xl font-black uppercase italic tracking-tighter text-primary/40 dark:text-beige/40 mb-2">Feed Silencioso</h3>
+                                <p className="text-xs font-bold text-primary/30 dark:text-beige/30 max-w-[200px] mx-auto px-4 leading-relaxed">Nadie ha publicado en este Lock-In todavía. ¡Sé el primero!</p>
                             </div>
                         )}
                     </TabsContent>
 
                     {/* GROUP CHAT TAB */}
                     <TabsContent value="chat" className="space-y-4 outline-none">
-                        <div className="bg-white/80 backdrop-blur-md rounded-[3rem] p-6 shadow-xl border border-gray-100 flex flex-col min-h-[500px] max-h-[600px]">
+                        <div className="bg-white/80 dark:bg-dark-surface/80 backdrop-blur-md rounded-[3rem] p-6 shadow-xl border border-gray-100 dark:border-white/10 flex flex-col min-h-[500px] max-h-[600px] transition-colors">
                             {/* Messages Container */}
-                            <div className="flex-1 overflow-y-auto space-y-4 mb-6 pr-2 scrollbar-thin scrollbar-thumb-primary/10">
+                            <div
+                                ref={scrollRef}
+                                className="flex-1 overflow-y-auto space-y-4 mb-6 pr-2 scrollbar-thin scrollbar-thumb-primary/10"
+                            >
                                 {messagesLoading && messages.length === 0 ? (
                                     <div className="flex justify-center py-20">
                                         <Loader2 className="h-8 w-8 text-primary animate-spin opacity-20" />
@@ -185,15 +215,15 @@ export function GroupDetails() {
                                         return (
                                             <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} gap-1 animate-in slide-in-from-bottom-2 duration-300`}>
                                                 {showHeader && !isMe && (
-                                                    <span className="text-[9px] font-black text-primary/40 uppercase tracking-[0.2em] ml-4 mb-1">
+                                                    <span className="text-[9px] font-black text-primary/40 dark:text-beige/40 uppercase tracking-[0.2em] ml-4 mb-1">
                                                         {msg.user?.display_name || msg.user?.username}
                                                     </span>
                                                 )}
                                                 <div className="flex items-end gap-2 group max-w-[85%]">
                                                     {!isMe && showHeader && (
-                                                        <Avatar className="h-6 w-6 border-2 border-white shadow-sm ring-1 ring-primary/5">
+                                                        <Avatar className="h-6 w-6 border-2 border-white dark:border-dark-surface shadow-sm ring-1 ring-primary/5 dark:ring-beige/5">
                                                             <AvatarImage src={msg.user?.profile_picture_url || ''} />
-                                                            <AvatarFallback className="text-[8px] bg-primary/5 text-primary font-black uppercase">
+                                                            <AvatarFallback className="text-[8px] bg-primary/5 dark:bg-beige/5 text-primary dark:text-beige font-black uppercase">
                                                                 {msg.user?.username?.[0]}
                                                             </AvatarFallback>
                                                         </Avatar>
@@ -201,11 +231,11 @@ export function GroupDetails() {
                                                     {!isMe && !showHeader && <div className="w-6" />}
 
                                                     <div className={`rounded-3xl px-5 py-3.5 text-sm font-bold shadow-sm ${isMe
-                                                        ? 'bg-primary text-white rounded-br-lg'
-                                                        : 'bg-white text-gray-800 rounded-bl-lg border border-gray-100'
+                                                        ? 'bg-primary text-white rounded-br-lg shadow-lg shadow-primary/20'
+                                                        : 'bg-white dark:bg-dark-card text-primary dark:text-beige rounded-bl-lg border border-gray-100 dark:border-white/10'
                                                         }`}>
                                                         <p className="leading-relaxed">{msg.content}</p>
-                                                        <span className={`text-[7px] font-black uppercase tracking-widest mt-1 block opacity-30 text-right ${isMe ? 'text-white' : 'text-primary'}`}>
+                                                        <span className={`text-[7px] font-black uppercase tracking-widest mt-1 block opacity-30 text-right ${isMe ? 'text-white' : 'text-primary dark:text-beige'}`}>
                                                             {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                         </span>
                                                     </div>
@@ -214,7 +244,7 @@ export function GroupDetails() {
                                         );
                                     })
                                 ) : (
-                                    <div className="text-center py-20 opacity-20 flex flex-col items-center">
+                                    <div className="text-center py-20 opacity-20 flex flex-col items-center text-primary dark:text-beige">
                                         <MessageSquare className="h-16 w-16 mb-4" />
                                         <p className="text-xs font-black uppercase italic tracking-widest">Empieza el Lock-In Chat</p>
                                     </div>
@@ -222,20 +252,20 @@ export function GroupDetails() {
                             </div>
 
                             {/* Input Form */}
-                            <form onSubmit={handleSendGroupMessage} className="flex gap-3 bg-gray-50 p-2 rounded-[2rem] border border-transparent focus-within:border-primary/20 transition-all shadow-inner">
+                            <form onSubmit={handleSendGroupMessage} className="flex gap-3 bg-gray-50 dark:bg-dark-card/50 p-2 rounded-[2rem] border border-transparent focus-within:border-primary/20 dark:focus-within:border-beige/20 transition-all shadow-inner">
                                 <Input
                                     value={groupMessage}
                                     onChange={(e) => setGroupMessage(e.target.value)}
                                     placeholder="Mensaje al equipo..."
-                                    className="bg-transparent border-none focus-visible:ring-0 font-bold h-12 shadow-none text-xs"
+                                    className="bg-transparent border-none focus-visible:ring-0 font-bold h-12 shadow-none text-xs text-primary dark:text-beige placeholder:text-primary/20 dark:placeholder:text-beige/20"
                                 />
                                 <Button
                                     type="submit"
                                     disabled={!groupMessage.trim() || isSending}
-                                    className="rounded-full h-12 w-12 p-0 bg-primary text-white shadow-lg shadow-primary/20 hover:scale-110 active:scale-90 transition-all flex-shrink-0"
+                                    className="rounded-full h-12 w-12 p-0 bg-primary dark:bg-beige text-white dark:text-dark-bg shadow-lg shadow-primary/20 dark:shadow-none hover:scale-110 active:scale-90 transition-all flex-shrink-0"
                                 >
                                     {isSending ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        <Loader2 className="h-4 w-4 animate-spin text-white dark:text-dark-bg" />
                                     ) : (
                                         <Send className="h-4 w-4" />
                                     )}
@@ -247,14 +277,14 @@ export function GroupDetails() {
 
                     {/* MEMBERS TAB */}
                     <TabsContent value="members" className="space-y-4 outline-none">
-                        <div className="bg-white/80 backdrop-blur-md rounded-[3rem] p-6 shadow-xl border border-gray-100 overflow-hidden">
+                        <div className="bg-white/80 dark:bg-dark-surface/80 backdrop-blur-md rounded-[3rem] p-6 shadow-xl border border-gray-100 dark:border-white/10 transition-colors overflow-hidden">
                             <div className="flex items-center justify-between mb-8 px-2">
-                                <h4 className="text-xs font-black uppercase tracking-[0.2em] text-primary/40">Miembros del equipo</h4>
+                                <h4 className="text-xs font-black uppercase tracking-[0.2em] text-primary/40 dark:text-beige/40">Miembros del equipo</h4>
                                 {isAdmin && (
                                     <Button
                                         onClick={() => setIsInviteOpen(true)}
                                         size="sm"
-                                        className="rounded-xl h-8 gap-2 bg-primary/5 hover:bg-primary/10 text-primary font-black text-[9px] uppercase tracking-widest px-4 border border-primary/5"
+                                        className="rounded-xl h-8 gap-2 bg-primary/5 dark:bg-beige/5 hover:bg-primary/10 dark:hover:bg-beige/10 text-primary dark:text-beige font-black text-[9px] uppercase tracking-widest px-4 border border-primary/5 dark:border-beige/5"
                                     >
                                         <UserPlus className="h-3 w-3" /> Invitar
                                     </Button>
@@ -265,30 +295,30 @@ export function GroupDetails() {
                                     <div
                                         key={member.id}
                                         onClick={() => navigate(`/profile/${member.user_id}`)}
-                                        className="flex items-center justify-between p-4 rounded-2xl bg-gray-50/50 hover:bg-primary/5 transition-all cursor-pointer group border border-transparent hover:border-primary/10"
+                                        className="flex items-center justify-between p-4 rounded-2xl bg-gray-50/50 dark:bg-dark-card/30 hover:bg-primary/5 dark:hover:bg-beige/5 transition-all cursor-pointer group border border-transparent hover:border-primary/10 dark:hover:border-beige/10"
                                     >
                                         <div className="flex items-center gap-4">
-                                            <Avatar className="h-12 w-12 border-2 border-white shadow-md ring-2 ring-primary/5">
+                                            <Avatar className="h-12 w-12 border-2 border-white dark:border-dark-surface shadow-md ring-2 ring-primary/5 dark:ring-beige/5">
                                                 <AvatarImage src={member.users?.profile_picture_url || ''} />
-                                                <AvatarFallback className="bg-primary/10 text-primary font-black italic text-xs">
+                                                <AvatarFallback className="bg-primary/10 dark:bg-beige/10 text-primary dark:text-beige font-black italic text-xs">
                                                     {member.users?.username?.[0]?.toUpperCase()}
                                                 </AvatarFallback>
                                             </Avatar>
                                             <div>
                                                 <div className="flex items-center gap-2">
-                                                    <p className="font-black text-sm text-gray-900 uppercase italic tracking-tight truncate max-w-[120px]">
+                                                    <p className="font-black text-sm text-primary dark:text-beige uppercase italic tracking-tight truncate max-w-[120px]">
                                                         {member.users?.display_name || member.users?.username}
                                                     </p>
                                                     {member.role === 'admin' && (
                                                         <Crown className="h-3 w-3 text-yellow-500 fill-yellow-500/20" />
                                                     )}
                                                 </div>
-                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                                                <p className="text-[10px] text-primary/40 dark:text-beige/40 font-bold uppercase tracking-widest">
                                                     @{member.users?.username}
                                                 </p>
                                             </div>
                                         </div>
-                                        <div className="bg-white text-[8px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-sm border border-gray-100 group-hover:bg-primary group-hover:text-white transition-colors">
+                                        <div className="bg-white dark:bg-dark-surface text-[8px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-sm border border-gray-100 dark:border-white/5 group-hover:bg-primary dark:group-hover:bg-beige group-hover:text-white dark:group-hover:text-dark-bg transition-colors">
                                             {member.role === 'admin' ? 'CAPITÁN' : 'GUERRERO'}
                                         </div>
                                     </div>
@@ -299,33 +329,33 @@ export function GroupDetails() {
 
                     {/* INFO TAB */}
                     <TabsContent value="info" className="space-y-4 outline-none">
-                        <div className="bg-white/80 backdrop-blur-md rounded-[3rem] p-8 shadow-xl border border-gray-100">
+                        <div className="bg-white/80 dark:bg-dark-surface/80 backdrop-blur-md rounded-[3rem] p-8 shadow-xl border border-gray-100 dark:border-white/10 transition-colors">
                             <div className="space-y-8">
                                 <div>
-                                    <h4 className="text-xs font-black uppercase tracking-[0.2em] text-primary/40 mb-4 px-2">Estadísticas del Lock-In</h4>
+                                    <h4 className="text-xs font-black uppercase tracking-[0.2em] text-primary/40 dark:text-beige/40 mb-4 px-2">Estadísticas del Lock-In</h4>
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div className="bg-primary/5 p-6 rounded-[2rem] border border-primary/10 text-center shadow-inner">
-                                            <p className="text-2xl font-black italic text-primary leading-none mb-1">{activity.length}</p>
-                                            <p className="text-[9px] font-black uppercase tracking-widest opacity-40">Entrenamientos</p>
+                                        <div className="bg-primary/5 dark:bg-beige/5 p-6 rounded-[2rem] border border-primary/10 dark:border-beige/10 text-center shadow-inner">
+                                            <p className="text-2xl font-black italic text-primary dark:text-beige leading-none mb-1">{activity.length}</p>
+                                            <p className="text-[9px] font-black uppercase tracking-widest opacity-40 dark:text-beige/40">Entrenamientos</p>
                                         </div>
-                                        <div className="bg-accent/5 p-6 rounded-[2rem] border border-accent/10 text-center shadow-inner">
-                                            <p className="text-2xl font-black italic text-accent leading-none mb-1">{members.length}</p>
-                                            <p className="text-[9px] font-black uppercase tracking-widest opacity-40">Miembros</p>
+                                        <div className="bg-accent/5 dark:bg-accent/5 p-6 rounded-[2rem] border border-accent/10 dark:border-accent/10 text-center shadow-inner">
+                                            <p className="text-2xl font-black italic text-secondary dark:text-accent leading-none mb-1">{members.length}</p>
+                                            <p className="text-[9px] font-black uppercase tracking-widest opacity-40 dark:text-accent/40">Miembros</p>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <h4 className="text-xs font-black uppercase tracking-[0.2em] text-primary/40 mb-4 px-2">Acerca de</h4>
-                                    <div className="bg-gray-50 p-6 rounded-[2rem] space-y-4 border border-gray-100">
+                                    <h4 className="text-xs font-black uppercase tracking-[0.2em] text-primary/40 dark:text-beige/40 mb-4 px-2">Acerca de</h4>
+                                    <div className="bg-earth-bg/50 dark:bg-dark-card/50 p-6 rounded-[2rem] space-y-4 border border-sand/20 dark:border-white/5">
                                         <div className="flex justify-between items-center text-xs">
-                                            <span className="font-bold opacity-40 uppercase tracking-widest">Creado el</span>
-                                            <span className="font-black text-primary uppercase italic">{new Date(group.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                                            <span className="font-bold opacity-40 dark:text-beige/40 uppercase tracking-widest">Creado el</span>
+                                            <span className="font-black text-primary dark:text-beige uppercase italic">{new Date(group.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                                         </div>
-                                        <div className="h-px bg-gray-200" />
+                                        <div className="h-px bg-sand/10 dark:bg-white/5" />
                                         <div className="flex justify-between items-center text-xs">
-                                            <span className="font-bold opacity-40 uppercase tracking-widest">Privacidad</span>
-                                            <span className="font-black text-primary uppercase italic">{group.is_private ? 'Privado (Solo Invitación)' : 'Público'}</span>
+                                            <span className="font-bold opacity-40 dark:text-beige/40 uppercase tracking-widest">Privacidad</span>
+                                            <span className="font-black text-primary dark:text-beige uppercase italic">{group.is_private ? 'Privado (Solo Invitación)' : 'Público'}</span>
                                         </div>
                                     </div>
                                 </div>

@@ -17,7 +17,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Spinner } from '@/components/ui/spinner';
 import { useNavigate } from 'react-router-dom';
 
 const profileSchema = z.object({
@@ -123,38 +122,40 @@ export function Settings() {
     };
 
     return (
-        <div className="max-w-2xl mx-auto space-y-6">
-            <div className="flex items-center justify-between px-1">
-                <h1 className="text-2xl font-bold">Configuración</h1>
-                <Button variant="ghost" size="sm" onClick={() => {
+        <div className="max-w-2xl mx-auto space-y-8 pb-20 animate-in fade-in duration-500 transition-colors">
+            <header className="flex flex-col sm:flex-row items-center justify-between gap-4 px-1">
+                <div>
+                    <h1 className="text-4xl font-black text-primary dark:text-beige italic uppercase tracking-tighter leading-none text-center sm:text-left">Ajustes</h1>
+                    <p className="text-[10px] font-bold text-primary/40 dark:text-beige/40 uppercase tracking-[0.2em] mt-2 text-center sm:text-left">Configuración y cuenta</p>
+                </div>
+                <Button variant="ghost" size="sm" className="rounded-2xl font-black uppercase italic text-primary dark:text-beige hover:bg-primary/5 dark:hover:bg-white/5" onClick={() => {
                     const profileId = user?.id || session?.user?.id;
-                    console.log('Settings: Navigating to profile ID:', profileId);
                     navigate(`/profile/${profileId}`);
                 }}>
-                    Ver Perfil
+                    Ver Mi Perfil
                 </Button>
-            </div>
+            </header>
 
-            <div className="grid gap-6">
+            <div className="grid gap-8">
                 {/* Avatar Section */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg">Foto de Perfil</CardTitle>
+                <Card className="bg-white/60 dark:bg-dark-surface/60 backdrop-blur-xl rounded-[2.5rem] border border-white/40 dark:border-white/10 shadow-xl overflow-hidden transition-colors">
+                    <CardHeader className="p-8 pb-4">
+                        <CardTitle className="text-xl font-black italic uppercase tracking-tighter text-primary dark:text-beige">Foto de Perfil</CardTitle>
                     </CardHeader>
-                    <CardContent className="flex flex-col items-center gap-4">
+                    <CardContent className="flex flex-col items-center gap-6 p-8 pt-0">
                         <div className="relative group">
-                            <Avatar key={user?.profile_picture_url || 'settings-avatar'} className="h-32 w-32 border-2 border-primary/10 shadow-sm transition-opacity group-hover:opacity-80">
+                            <Avatar key={user?.profile_picture_url || 'settings-avatar'} className="h-40 w-40 border-4 border-white dark:border-dark-card shadow-2xl transition-transform duration-500 group-hover:scale-105">
                                 <AvatarImage src={user?.profile_picture_url || ''} />
-                                <AvatarFallback className="text-4xl bg-primary/5 text-primary">
+                                <AvatarFallback className="text-4xl bg-primary/5 dark:bg-beige/5 text-primary dark:text-beige font-black italic">
                                     {(user?.display_name?.[0] || 'U').toUpperCase()}
                                 </AvatarFallback>
                             </Avatar>
                             <button
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={isUploading}
-                                className="absolute inset-0 flex items-center justify-center bg-black/40 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:cursor-not-allowed"
+                                className="absolute inset-0 flex items-center justify-center bg-black/40 text-white rounded-[2rem] opacity-0 group-hover:opacity-100 transition-opacity disabled:cursor-not-allowed"
                             >
-                                {isUploading ? <Loader2 className="animate-spin" /> : <Camera />}
+                                {isUploading ? <Loader2 className="animate-spin h-8 w-8" /> : <Camera className="h-8 w-8" />}
                             </button>
                             <input
                                 type="file"
@@ -164,67 +165,71 @@ export function Settings() {
                                 accept="image/*"
                             />
                         </div>
-                        <p className="text-xs text-muted-foreground">Formatos: JPG, PNG, GIF. Máx 2MB.</p>
+                        <p className="text-[10px] font-bold text-primary/40 dark:text-beige/40 uppercase tracking-widest">Formatos: JPG, PNG, GIF. Máx 2MB.</p>
                     </CardContent>
                 </Card>
 
                 {/* Profile Info Section */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg">Información Personal</CardTitle>
+                <Card className="bg-white/60 dark:bg-dark-surface/60 backdrop-blur-xl rounded-[2.5rem] border border-white/40 dark:border-white/10 shadow-xl overflow-hidden transition-colors">
+                    <CardHeader className="p-8 pb-4">
+                        <CardTitle className="text-xl font-black italic uppercase tracking-tighter text-primary dark:text-beige">Información Personal</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="displayName">Nombre a mostrar</Label>
-                                <div className="relative">
-                                    <UserIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <CardContent className="p-8 pt-0">
+                        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                            <div className="space-y-3">
+                                <Label htmlFor="displayName" className="text-[11px] font-black uppercase tracking-widest text-primary/60 dark:text-beige/60 ml-1">Nombre a mostrar</Label>
+                                <div className="relative group">
+                                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary/30 dark:text-beige/30 transition-colors group-focus-within:text-primary dark:group-focus-within:text-beige" />
                                     <Input
                                         id="displayName"
-                                        className="pl-9"
-                                        placeholder="Ej. Tiago Gym"
+                                        className="pl-12 h-14 rounded-2xl border-sand/50 dark:border-white/10 bg-white/50 dark:bg-dark-card/50 focus:ring-primary dark:focus:ring-beige transition-all font-bold text-primary dark:text-beige"
+                                        placeholder="Tu nombre ninja..."
                                         {...register('displayName')}
                                     />
                                 </div>
                                 {errors.displayName && (
-                                    <p className="text-xs text-red-500 font-medium">{errors.displayName.message}</p>
+                                    <p className="text-xs text-red-500 font-bold ml-1">{errors.displayName.message}</p>
                                 )}
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="bio">Biografía</Label>
-                                <div className="relative">
-                                    <FileText className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <div className="space-y-3">
+                                <Label htmlFor="bio" className="text-[11px] font-black uppercase tracking-widest text-primary/60 dark:text-beige/60 ml-1">Biografía</Label>
+                                <div className="relative group">
+                                    <FileText className="absolute left-4 top-4 h-5 w-5 text-primary/30 dark:text-beige/30 transition-colors group-focus-within:text-primary dark:group-focus-within:text-beige" />
                                     <textarea
                                         id="bio"
-                                        className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-9 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="flex min-h-[120px] w-full rounded-[1.5rem] border border-sand/50 dark:border-white/10 bg-white/50 dark:bg-dark-card/50 px-12 py-4 text-sm font-bold shadow-sm placeholder:text-primary/20 dark:placeholder:text-beige/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:focus-visible:ring-beige disabled:cursor-not-allowed disabled:opacity-50 text-primary dark:text-beige transition-all italic"
                                         placeholder="Cuéntanos sobre tu camino fitness..."
                                         {...register('bio')}
                                     />
                                 </div>
                                 {errors.bio && (
-                                    <p className="text-xs text-red-500 font-medium">{errors.bio.message}</p>
+                                    <p className="text-xs text-red-500 font-bold ml-1">{errors.bio.message}</p>
                                 )}
                             </div>
 
                             {error && (
-                                <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md flex items-center gap-2">
-                                    <X className="h-4 w-4" />
+                                <div className="p-4 text-sm text-red-500 bg-red-50 dark:bg-red-950/20 rounded-2xl flex items-center gap-3 border border-red-100 dark:border-red-900/50 font-bold">
+                                    <X className="h-5 w-5 shrink-0" />
                                     {error}
                                 </div>
                             )}
 
                             {success && (
-                                <div className="p-3 text-sm text-emerald-600 bg-emerald-50 rounded-md flex items-center gap-2">
-                                    <Check className="h-4 w-4" />
-                                    Perfil actualizado con éxito
+                                <div className="p-4 text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 rounded-2xl flex items-center gap-3 border border-emerald-100 dark:border-emerald-900/50 font-bold">
+                                    <Check className="h-5 w-5 shrink-0" />
+                                    ¡Perfil actualizado con éxito!
                                 </div>
                             )}
 
-                            <Button type="submit" className="w-full" disabled={isSubmitting || isUploading}>
+                            <Button
+                                type="submit"
+                                className="w-full h-14 rounded-2xl font-black uppercase italic tracking-widest shadow-xl transition-all active:scale-95 bg-primary dark:bg-beige text-white dark:text-dark-bg hover:opacity-90"
+                                disabled={isSubmitting || isUploading}
+                            >
                                 {isSubmitting ? (
                                     <>
-                                        <Spinner size="sm" className="mr-2 border-t-white" />
+                                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                                         Guardando...
                                     </>
                                 ) : 'Guardar Cambios'}

@@ -36,6 +36,12 @@ export function useGroupMessages(groupId: string) {
 
             if (error) throw error;
             setMessages(data || []);
+
+            // Mark as read when fetching history
+            if (data && data.length > 0) {
+                const lastMsg = data[data.length - 1];
+                markAsRead(lastMsg.id);
+            }
         } catch (err) {
             console.error('Error fetching group messages:', err);
         } finally {
@@ -43,7 +49,29 @@ export function useGroupMessages(groupId: string) {
         }
     }, [groupId]);
 
-    // 2. Send Message
+    // 2. Mark as Read
+    const markAsRead = useCallback(async (messageId?: string) => {
+        if (!user || !groupId) return;
+
+        try {
+            const { error } = await supabase
+                .from('group_message_reads')
+                .upsert({
+                    user_id: user.id,
+                    group_id: groupId,
+                    last_read_message_id: messageId,
+                    updated_at: new Date().toISOString()
+                }, {
+                    onConflict: 'user_id,group_id'
+                });
+
+            if (error) throw error;
+        } catch (err) {
+            console.error('Error marking group as read:', err);
+        }
+    }, [user, groupId]);
+
+    // 3. Send Message
     const sendGroupMessage = async (content: string) => {
         if (!user || !content.trim() || !groupId) return null;
         try {
@@ -61,6 +89,10 @@ export function useGroupMessages(groupId: string) {
                 .single();
 
             if (error) throw error;
+
+            // Mark as read after sending
+            markAsRead(data.id);
+
             return data;
         } catch (err) {
             console.error('Error sending group message:', err);
@@ -68,7 +100,7 @@ export function useGroupMessages(groupId: string) {
         }
     };
 
-    // 3. Real-time Subscription
+    // 4. Real-time Subscription
     useEffect(() => {
         if (!groupId) return;
 
@@ -85,8 +117,7 @@ export function useGroupMessages(groupId: string) {
                 async (payload) => {
                     const newMsg = payload.new;
 
-                    // Since payload.new doesn't include joined user data, 
-                    // we fetch the user info for the new message
+                    // Fetch user info for the new message
                     const { data: userData } = await supabase
                         .from('users')
                         .select('username, display_name, profile_picture_url')
@@ -99,7 +130,6 @@ export function useGroupMessages(groupId: string) {
                     };
 
                     setMessages(prev => {
-                        // Prevent duplicates (e.g. if the sender also updates locally)
                         if (prev.some(m => m.id === completeMsg.id)) return prev;
                         return [...prev, completeMsg];
                     });
@@ -110,13 +140,14 @@ export function useGroupMessages(groupId: string) {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [groupId]);
+    }, [groupId, markAsRead]);
 
     return {
         messages,
         loading,
         fetchMessages,
         sendGroupMessage,
-        setMessages
+        setMessages,
+        markAsRead
     };
 }

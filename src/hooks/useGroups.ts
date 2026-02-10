@@ -100,6 +100,27 @@ export function useGroups() {
                 .single();
 
             if (inviteError) throw inviteError;
+
+            // Create notification for the invitee
+            try {
+                // Get group name first for the message
+                const { data: groupData } = await supabase
+                    .from('groups')
+                    .select('name')
+                    .eq('id', groupId)
+                    .single();
+
+                await supabase.from('notifications').insert({
+                    user_id: inviteeId,
+                    actor_id: user.id,
+                    type: 'invite',
+                    resource_id: groupId,
+                    message: `te invitó al grupo "${groupData?.name || 'un grupo'}"`
+                });
+            } catch (notifErr) {
+                console.error('Error creating notification for group invite:', notifErr);
+            }
+
             return data;
         } catch (err: any) {
             console.error('Error sending invite:', err);

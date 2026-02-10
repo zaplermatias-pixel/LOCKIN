@@ -6,11 +6,9 @@ import { WorkoutCard } from '@/components/workouts/WorkoutCard';
 import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import {
-    Flame,
     Lock,
     PlusCircle,
     RefreshCcw,
-    Trophy,
     Zap,
     AlertCircle
 } from 'lucide-react';
@@ -54,14 +52,20 @@ export function Feed() {
 
     return (
         <div className="pb-10 max-w-lg mx-auto">
+            {/* Header Title (Added if not already there, based on design) */}
+            <header className="mb-8 px-4">
+                <h1 className="text-4xl font-black text-primary dark:text-beige italic uppercase tracking-tighter leading-none">Feed</h1>
+                <p className="text-[10px] font-bold text-primary/40 dark:text-beige/40 uppercase tracking-[0.2em] mt-2">Actividad de tus amigos</p>
+            </header>
+
             {/* Today's Mission Status */}
             {!hasWorkedOutToday ? (
-                <div className="mb-12 relative overflow-hidden bg-gradient-to-br from-primary to-accent rounded-[3rem] p-10 text-white shadow-2xl shadow-primary/30 group ring-4 ring-white/10">
+                <div className="mb-12 relative overflow-hidden bg-gradient-to-br from-primary to-accent dark:from-dark-card dark:to-dark-surface rounded-[3rem] p-10 text-white dark:text-beige shadow-2xl shadow-primary/30 dark:shadow-none group ring-4 ring-white/10 dark:ring-white/5 transition-all">
                     <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl transition-transform group-hover:scale-125 duration-1000" />
 
                     <div className="relative z-10 flex flex-col items-center text-center space-y-6">
-                        <div className="bg-white/20 backdrop-blur-xl p-5 rounded-[2.5rem] border border-white/30 shadow-2xl">
-                            <Lock className="h-10 w-10 text-white fill-white/10" />
+                        <div className="bg-white/20 dark:bg-white/5 backdrop-blur-xl p-5 rounded-[2.5rem] border border-white/30 dark:border-white/10 shadow-2xl">
+                            <Lock className="h-10 w-10 text-white dark:text-beige fill-white/10" />
                         </div>
 
                         <div className="space-y-2">
@@ -71,38 +75,27 @@ export function Feed() {
 
                         <Button
                             onClick={() => navigate('/new-workout')}
-                            className="bg-white text-primary hover:bg-earth-bg hover:scale-105 font-black uppercase italic py-8 px-12 rounded-3xl shadow-2xl transition-all active:scale-95 text-xl h-auto w-full max-w-sm ring-4 ring-white/20"
+                            className="bg-white dark:bg-beige text-primary dark:text-dark-bg hover:bg-earth-bg dark:hover:opacity-90 hover:scale-105 font-black uppercase italic py-8 px-12 rounded-3xl shadow-2xl transition-all active:scale-95 text-xl h-auto w-full max-w-sm ring-4 ring-white/20"
                         >
                             ¡Bloquear Mi Día!
                         </Button>
-
-                        <div className="flex items-center gap-6 pt-2">
-                            <div className="flex items-center gap-2 opacity-80 bg-white/10 px-4 py-2 rounded-2xl">
-                                <Trophy className="h-4 w-4 text-white" />
-                                <span className="text-[10px] font-black uppercase tracking-widest">+10 PTS</span>
-                            </div>
-                            <div className="flex items-center gap-2 opacity-80 bg-white/10 px-4 py-2 rounded-2xl">
-                                <Flame className="h-4 w-4 text-white" />
-                                <span className="text-[10px] font-black uppercase tracking-widest">+1 DÍA</span>
-                            </div>
-                        </div>
                     </div>
                 </div>
             ) : (
                 <div className="mb-10 flex items-center justify-between px-4">
                     <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-primary shadow-lg shadow-primary/20 flex items-center justify-center text-white ring-4 ring-white">
+                        <div className="h-12 w-12 rounded-2xl bg-primary dark:bg-beige shadow-lg shadow-primary/20 dark:shadow-none flex items-center justify-center text-white dark:text-dark-bg ring-4 ring-white dark:ring-dark-card">
                             <Zap className="h-6 w-6 fill-current" />
                         </div>
                         <div>
-                            <h2 className="text-xl font-black uppercase italic tracking-tighter leading-none text-primary">Actividad Real</h2>
-                            <p className="text-[10px] font-black text-primary/40 uppercase tracking-[0.2em] mt-1">Estás en racha 🔥</p>
+                            <h2 className="text-xl font-black uppercase italic tracking-tighter leading-none text-primary dark:text-beige">Actividad Real</h2>
+                            <p className="text-[10px] font-black text-primary/40 dark:text-beige/40 uppercase tracking-[0.2em] mt-1">Estás en racha 🔥</p>
                         </div>
                     </div>
                     <Button
                         variant="ghost"
                         onClick={refetch}
-                        className="text-primary hover:bg-primary/5 font-black text-[10px] uppercase tracking-widest p-0 h-10 w-10 rounded-2xl"
+                        className="text-primary dark:text-beige hover:bg-primary/5 dark:hover:bg-white/5 font-black text-[10px] uppercase tracking-widest p-0 h-10 w-10 rounded-2xl"
                     >
                         <RefreshCcw className="h-5 w-5" />
                     </Button>
@@ -121,15 +114,15 @@ export function Feed() {
                     ))
                 ) : (
                     !loading && (
-                        <div className="flex flex-col items-center justify-center py-24 text-center px-10 bg-white/40 backdrop-blur-md rounded-[3rem] border-4 border-dashed border-sand/30 ring-1 ring-sand/20">
-                            <div className="bg-sand/30 p-8 rounded-[2.5rem] mb-8 shadow-inner">
-                                <PlusCircle className="h-14 w-14 text-primary/20" />
+                        <div className="flex flex-col items-center justify-center py-24 text-center px-10 bg-white/40 dark:bg-dark-surface/40 backdrop-blur-md rounded-[3rem] border-4 border-dashed border-sand/30 dark:border-white/10 ring-1 ring-sand/20 dark:ring-white/5 transition-colors">
+                            <div className="bg-sand/30 dark:bg-white/5 p-8 rounded-[2.5rem] mb-8 shadow-inner">
+                                <PlusCircle className="h-14 w-14 text-primary/20 dark:text-beige/20" />
                             </div>
-                            <h3 className="text-2xl font-black uppercase italic tracking-tighter mb-3 text-primary/40">Desierto Total</h3>
-                            <p className="text-sm font-bold text-primary/30 mb-10 max-w-[240px]">Nadie ha publicado hoy. ¡Sé la leyenda que rompa el silencio!</p>
+                            <h3 className="text-2xl font-black uppercase italic tracking-tighter mb-3 text-primary/40 dark:text-beige/40">Desierto Total</h3>
+                            <p className="text-sm font-bold text-primary/30 dark:text-beige/30 mb-10 max-w-[240px]">Nadie ha publicado hoy. ¡Sé la leyenda que rompa el silencio!</p>
                             <Button
                                 onClick={() => navigate('/new-workout')}
-                                className="bg-primary text-white hover:scale-105 rounded-2xl font-black uppercase italic tracking-widest px-8 shadow-xl shadow-primary/20"
+                                className="bg-primary dark:bg-beige text-white dark:text-dark-bg hover:scale-105 rounded-2xl font-black uppercase italic tracking-widest px-8 shadow-xl shadow-primary/20 dark:shadow-none transition-all"
                             >
                                 Publicar Ahora
                             </Button>

@@ -83,6 +83,14 @@ export function useFriendships(targetUserId: string | undefined) {
                     });
 
                 if (error) throw error;
+
+                // Create notification
+                await supabase.from('notifications').insert({
+                    user_id: targetUserId,
+                    actor_id: currentUser.id,
+                    type: 'follow',
+                    message: 'empezó a seguirte'
+                });
             }
         } catch (err) {
             console.error('Error toggling follow:', err);

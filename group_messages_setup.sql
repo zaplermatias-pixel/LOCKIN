@@ -21,7 +21,7 @@ drop policy if exists "Group members can send messages" on public.group_messages
 -- Ver mensajes: Solo si eres miembro del grupo
 create policy "Group messages are viewable by members"
   on public.group_messages for select
-  using (
+  using (   
     exists (
       select 1 from public.group_members
       where group_id = public.group_messages.group_id

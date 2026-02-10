@@ -65,10 +65,10 @@ export function GroupSettingsDialog({ group, isOpen, onOpenChange, onUpdate }: G
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent className="rounded-[2.5rem] border-none p-8 max-w-[90vw] sm:max-w-md bg-white">
+            <DialogContent className="rounded-[2.5rem] border-none p-8 max-w-[90vw] sm:max-w-md bg-white dark:bg-dark-surface shadow-2xl transition-colors">
                 <DialogHeader>
-                    <DialogTitle className="text-2xl font-black italic uppercase tracking-tighter text-black text-left">Ajustes del Lock-In</DialogTitle>
-                    <DialogDescription className="text-gray-400 font-bold text-left">
+                    <DialogTitle className="text-2xl font-black italic uppercase tracking-tighter text-primary dark:text-beige text-left">Ajustes del Lock-In</DialogTitle>
+                    <DialogDescription className="text-primary/40 dark:text-beige/40 font-bold text-left">
                         Personaliza la identidad visual y misión de tu equipo.
                     </DialogDescription>
                 </DialogHeader>
@@ -76,22 +76,22 @@ export function GroupSettingsDialog({ group, isOpen, onOpenChange, onUpdate }: G
                 <div className="space-y-6 py-6 overflow-y-auto max-h-[60vh] pr-2 custom-scrollbar">
                     {/* Image Preview & Upload */}
                     <div className="relative group/cover">
-                        <div className="w-full h-40 bg-gray-100 rounded-[2rem] overflow-hidden border-2 border-dashed border-gray-200 flex items-center justify-center relative">
+                        <div className="w-full h-40 bg-earth-bg/50 dark:bg-dark-card/50 rounded-[2rem] overflow-hidden border-2 border-dashed border-sand/30 dark:border-white/10 flex items-center justify-center relative transition-all">
                             {imageUrl ? (
                                 <img src={imageUrl} alt="Cover" className="w-full h-full object-cover" />
                             ) : (
-                                <Camera className="h-10 w-10 text-gray-300" />
+                                <Camera className="h-10 w-10 text-primary/20 dark:text-beige/20" />
                             )}
                             {isUploading && (
-                                <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center">
-                                    <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                                <div className="absolute inset-0 bg-white/60 dark:bg-dark-bg/60 backdrop-blur-sm flex items-center justify-center">
+                                    <Loader2 className="h-8 w-8 text-primary dark:text-beige animate-spin" />
                                 </div>
                             )}
                         </div>
                         <Button
                             variant="secondary"
                             size="sm"
-                            className="absolute bottom-4 right-4 rounded-xl font-black text-[10px] uppercase tracking-widest bg-white/90 backdrop-blur-md shadow-lg"
+                            className="absolute bottom-4 right-4 rounded-xl font-black text-[10px] uppercase tracking-widest bg-white/90 dark:bg-dark-surface/90 text-primary dark:text-beige backdrop-blur-md shadow-lg border border-white/20 dark:border-white/10 hover:scale-105 transition-all"
                             onClick={() => fileInputRef.current?.click()}
                             disabled={isUploading}
                         >
@@ -108,22 +108,22 @@ export function GroupSettingsDialog({ group, isOpen, onOpenChange, onUpdate }: G
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-xs font-black uppercase tracking-widest text-primary/40 ml-1">Nombre del Lock-In</label>
+                        <label className="text-xs font-black uppercase tracking-widest text-primary/40 dark:text-beige/40 ml-1">Nombre del Lock-In</label>
                         <Input
                             placeholder="Nombre del equipo..."
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            className="rounded-2xl bg-gray-50 border-none h-14 px-5 font-bold focus-visible:ring-primary/20"
+                            className="rounded-2xl bg-earth-bg/50 dark:bg-dark-card/50 border-none h-14 px-5 font-bold focus-visible:ring-primary/20 dark:focus-visible:ring-beige/20 text-primary dark:text-beige transition-all"
                         />
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-xs font-black uppercase tracking-widest text-primary/40 ml-1">La Misión</label>
+                        <label className="text-xs font-black uppercase tracking-widest text-primary/40 dark:text-beige/40 ml-1">La Misión</label>
                         <Textarea
                             placeholder="¿Cuál es el objetivo principal?"
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
-                            className="rounded-2xl bg-gray-50 border-none min-h-[120px] p-5 font-bold focus-visible:ring-primary/20 resize-none"
+                            className="rounded-2xl bg-earth-bg/50 dark:bg-dark-card/50 border-none min-h-[120px] p-5 font-bold focus-visible:ring-primary/20 dark:focus-visible:ring-beige/20 resize-none text-primary dark:text-beige transition-all"
                         />
                     </div>
                 </div>
@@ -132,14 +132,14 @@ export function GroupSettingsDialog({ group, isOpen, onOpenChange, onUpdate }: G
                     <Button
                         variant="ghost"
                         onClick={() => onOpenChange(false)}
-                        className="rounded-2xl font-bold order-2 sm:order-1"
+                        className="rounded-2xl font-bold order-2 sm:order-1 text-primary dark:text-beige hover:bg-earth-bg dark:hover:bg-white/5 transition-all"
                     >
                         Cancelar
                     </Button>
                     <Button
                         onClick={handleSave}
                         disabled={isSaving || !name.trim() || isUploading}
-                        className="rounded-2xl font-black uppercase italic bg-primary text-white h-14 px-8 shadow-xl shadow-primary/20 order-1 sm:order-2 flex-1"
+                        className="rounded-2xl font-black uppercase italic bg-primary dark:bg-beige text-white dark:text-dark-bg h-14 px-8 shadow-xl shadow-primary/20 dark:shadow-none order-1 sm:order-2 flex-1 hover:scale-[1.02] transition-all"
                     >
                         {isSaving ? <Spinner size="sm" className="mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                         {isSaving ? 'Guardando...' : 'Guardar Cambios'}

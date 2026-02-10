@@ -1,19 +1,15 @@
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
-    MessageCircle,
     Share2,
     Lock,
     Music,
-    MapPin,
-    Flame,
-    Zap,
-    Trophy
+    MessageCircle
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { CommentsSection } from './CommentsSection';
 import type { WorkoutWithDetails } from '@/types/database.types';
 
 interface WorkoutCardProps {
@@ -26,7 +22,7 @@ export function WorkoutCard({ workout, isLocked }: WorkoutCardProps) {
     const hasMultipleMedia = (workout.workout_media?.length || 0) > 1;
 
     return (
-        <Card className="overflow-hidden border-none shadow-xl bg-white/70 backdrop-blur-sm rounded-[2.5rem] mb-8 ring-1 ring-sand/50">
+        <Card className="overflow-hidden border-none shadow-xl bg-white/70 dark:bg-dark-card/70 backdrop-blur-sm rounded-[2.5rem] mb-8 ring-1 ring-sand/50 dark:ring-white/10 transition-colors">
             {/* Header */}
             <CardHeader className="p-5 flex flex-row items-center justify-between space-y-0">
                 <div className="flex items-center gap-3">
@@ -38,10 +34,10 @@ export function WorkoutCard({ workout, isLocked }: WorkoutCardProps) {
                     </Avatar>
                     <div>
                         <div className="flex items-center gap-1.5">
-                            <span className="font-black text-sm text-primary italic uppercase tracking-tighter">{workout.users?.display_name}</span>
-                            <span className="text-primary/30 text-[10px] font-bold uppercase tracking-widest">@{workout.users?.username}</span>
+                            <span className="font-black text-sm text-primary dark:text-beige italic uppercase tracking-tighter">{workout.users?.display_name}</span>
+                            <span className="text-primary/30 dark:text-beige/30 text-[10px] font-bold uppercase tracking-widest">@{workout.users?.username}</span>
                         </div>
-                        <p className="text-[10px] text-primary/40 font-bold uppercase tracking-widest mt-0.5">
+                        <p className="text-[10px] text-primary/40 dark:text-beige/40 font-bold uppercase tracking-widest mt-0.5">
                             {formatDistanceToNow(new Date(workout.created_at), { addSuffix: true, locale: es })}
                         </p>
                     </div>
@@ -64,9 +60,9 @@ export function WorkoutCard({ workout, isLocked }: WorkoutCardProps) {
             {/* Media Content */}
             <div className="relative aspect-[4/5] bg-sand/20 group mx-2 rounded-[2rem] overflow-hidden shadow-inner">
                 {isLocked ? (
-                    <div className="absolute inset-0 z-10 backdrop-blur-3xl bg-primary/20 flex flex-col items-center justify-center text-primary p-8 text-center">
-                        <div className="bg-white/40 p-5 rounded-3xl mb-4 shadow-xl">
-                            <Lock className="h-10 w-10 text-primary fill-primary/10" />
+                    <div className="absolute inset-0 z-10 backdrop-blur-3xl bg-primary/20 dark:bg-dark-bg/60 flex flex-col items-center justify-center text-primary dark:text-beige p-8 text-center">
+                        <div className="bg-white/40 dark:bg-white/10 p-5 rounded-3xl mb-4 shadow-xl">
+                            <Lock className="h-10 w-10 text-primary dark:text-beige fill-primary/10 dark:fill-beige/10" />
                         </div>
                         <h3 className="text-2xl font-black mb-2 uppercase italic tracking-tighter">🔒 BLOQUEADO</h3>
                         <p className="text-sm font-bold opacity-70 max-w-[220px] leading-snug">Publica tu sesión de hoy para desbloquear el feed de tus amigos.</p>
@@ -106,7 +102,7 @@ export function WorkoutCard({ workout, isLocked }: WorkoutCardProps) {
             {/* Description & Muscles */}
             <CardContent className="p-6 space-y-5">
                 {workout.description && !isLocked && (
-                    <p className="text-sm text-primary/80 font-bold leading-relaxed italic">
+                    <p className="text-sm text-primary/80 dark:text-beige/80 font-bold leading-relaxed italic">
                         "{workout.description}"
                     </p>
                 )}
@@ -114,21 +110,23 @@ export function WorkoutCard({ workout, isLocked }: WorkoutCardProps) {
                 {!isLocked && workout.workout_muscles && workout.workout_muscles.length > 0 && (
                     <div className="flex flex-wrap gap-2 pt-1">
                         {workout.workout_muscles.map((m, i) => (
-                            <span key={i} className="bg-primary/5 text-primary text-[10px] font-black px-4 py-1.5 rounded-xl border border-primary/10 uppercase tracking-widest shadow-sm">
+                            <span key={i} className="bg-primary/5 dark:bg-beige/5 text-primary dark:text-beige text-[10px] font-black px-4 py-1.5 rounded-xl border border-primary/10 dark:border-beige/10 uppercase tracking-widest shadow-sm">
                                 {m.muscle_group}
                             </span>
                         ))}
                     </div>
                 )}
+
+                <CommentsSection workoutId={workout.id} isLocked={isLocked} />
             </CardContent>
 
             {/* Footer Actions */}
             <CardFooter className="p-6 pt-0 flex items-center gap-4">
-                <Button variant="ghost" size="sm" className="rounded-2xl gap-2 px-6 h-12 bg-primary/5 hover:bg-primary hover:text-white text-primary transition-all font-black uppercase italic tracking-tighter flex-1 shadow-sm">
+                <Button variant="ghost" size="sm" className="rounded-2xl gap-2 px-6 h-12 bg-primary/5 dark:bg-beige/5 hover:bg-primary dark:hover:bg-beige hover:text-white dark:hover:text-dark-bg text-primary dark:text-beige transition-all font-black uppercase italic tracking-tighter flex-1 shadow-sm">
                     <MessageCircle className="h-4 w-4" />
                     <span>Motivar</span>
                 </Button>
-                <Button variant="ghost" size="icon" className="rounded-2xl h-12 w-12 bg-accent/5 hover:bg-accent hover:text-white text-accent transition-all shadow-sm">
+                <Button variant="ghost" size="icon" className="rounded-2xl h-12 w-12 bg-accent/5 dark:bg-accent/10 hover:bg-accent hover:text-white text-accent transition-all shadow-sm">
                     <Share2 className="h-5 w-5" />
                 </Button>
             </CardFooter>

@@ -5,12 +5,22 @@
     --color-accent: #8D3B1A;
     --color-sand: #E3D5CA;
     --color-earth-bg: #F5EBE0;
+
+    /* Dark Theme */
+    --color-dark-bg: #000000;
+    --color-dark-surface: #121212;
+    --color-dark-card: #1E1E1E;
+    --color-beige: #F5F5DC;
 }
 
 @layer base {
     body {
-        @apply bg-earth-bg text-[#2D3A18] antialiased;
+        @apply bg-earth-bg text-[#2D3A18] antialiased transition-colors duration-300;
         font-feature-settings: "ss01", "ss02", "cv01", "cv02";
+    }
+
+    .dark body {
+        @apply bg-dark-bg text-beige;
     }
 }
 
@@ -19,7 +29,15 @@
         @apply bg-sand/30 backdrop-blur-md border border-white/20;
     }
 
+    .dark .glass-earth {
+        @apply bg-dark-surface/50 backdrop-blur-md border border-white/5;
+    }
+
     .card-earth {
         @apply bg-sand/40 border border-[#D5C5B5] shadow-sm hover:shadow-md transition-all duration-300;
+    }
+
+    .dark .card-earth {
+        @apply bg-dark-card border border-white/10 shadow-xl;
     }
 }

@@ -64,7 +64,7 @@ export function AppLayout() {
     return (
         <div className="min-h-screen bg-earth-bg dark:bg-dark-bg flex flex-col sm:flex-row transition-colors duration-300">
             {/* Desktop Sidebar */}
-            <aside className="hidden sm:flex flex-col w-64 h-screen sticky top-0 border-r border-sand/50 dark:border-white/10 bg-white/50 dark:bg-dark-surface/50 backdrop-blur-md p-4 transition-colors">
+            <aside className="hidden sm:flex flex-col w-64 h-screen sticky top-0 border-r-2 border-sand/80 dark:border-white/20 bg-white/90 dark:bg-dark-surface/90 backdrop-blur-md p-4 transition-colors shadow-2xl z-50">
                 <div className="flex items-center justify-between mb-8 px-2">
                     <Link to="/feed" className="text-2xl font-bold text-primary dark:text-beige flex items-center gap-2">
                         <Dumbbell className="h-7 w-7" />
@@ -145,7 +145,7 @@ export function AppLayout() {
 
             <div className="flex-1 flex flex-col min-w-0">
                 {/* Mobile Header (Hidden on Desktop) */}
-                <header className="sticky top-0 z-40 w-full border-b border-sand/30 dark:border-white/10 bg-white/60 dark:bg-dark-surface/60 backdrop-blur-md sm:hidden transition-colors">
+                <header className="sticky top-0 z-40 w-full border-b-2 border-sand/80 dark:border-white/20 bg-white/95 dark:bg-dark-surface/95 backdrop-blur-md sm:hidden transition-colors shadow-md">
                     <div className="container mx-auto px-4 h-16 flex items-center justify-between">
                         <Link to="/feed" className="text-2xl font-bold text-primary dark:text-beige flex items-center gap-2">
                             <Dumbbell className="h-6 w-6" />
@@ -205,7 +205,7 @@ export function AppLayout() {
                 </main>
 
                 {/* Mobile Bottom Navigation */}
-                <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-sand/30 dark:border-white/10 bg-white/80 dark:bg-dark-surface/80 backdrop-blur-md sm:hidden h-16 transition-colors">
+                <nav className="fixed bottom-0 left-0 right-0 z-40 border-t-2 border-sand/80 dark:border-white/20 bg-white/95 dark:bg-dark-surface/95 backdrop-blur-md sm:hidden h-16 transition-colors shadow-[0_-5px_15px_-5px_rgba(0,0,0,0.15)]">
                     <div className="flex justify-around items-center h-full px-2">
                         {navItems.map((item) => {
                             const Icon = item.icon;

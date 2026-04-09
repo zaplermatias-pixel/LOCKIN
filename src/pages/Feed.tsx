@@ -18,11 +18,8 @@ export function Feed() {
     const { workouts, loading, hasWorkedOutToday, error, refetch } = useFeed();
 
     useEffect(() => {
-        const load = async () => {
-            await refetch();
-        };
-        load();
-    }, []); // Run once on mount
+        refetch();
+    }, [refetch]); // Se ejecuta cuando 'refetch' cambia (lo cual pasa cuando 'user' ya está disponible)
 
     if (loading && workouts.length === 0) {
         return (

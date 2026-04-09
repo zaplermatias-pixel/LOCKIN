@@ -38,11 +38,11 @@ export function Login() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-            <Card className="w-full max-w-md">
+        <div className="min-h-screen flex items-center justify-center bg-earth-bg dark:bg-dark-bg px-4 transition-colors duration-300">
+            <Card className="w-full max-w-md bg-white dark:bg-dark-surface backdrop-blur-md border-2 border-sand/80 dark:border-white/20 shadow-2xl">
                 <CardHeader className="text-center">
-                    <CardTitle className="text-4xl font-bold mb-2">💪 LockIn</CardTitle>
-                    <p className="text-gray-600">El esfuerzo no se presume, se honra</p>
+                    <CardTitle className="text-4xl font-black italic uppercase tracking-tighter mb-2 text-primary dark:text-beige">LockIn</CardTitle>
+                    <p className="text-sm font-bold uppercase tracking-widest text-primary/60 dark:text-beige/60">El esfuerzo no se presume, se honra</p>
                 </CardHeader>
 
                 <CardContent>
@@ -84,9 +84,9 @@ export function Login() {
                             {isSubmitting ? 'Iniciando sesión...' : 'Iniciar Sesión'}
                         </Button>
 
-                        <div className="text-center text-sm">
-                            <span className="text-gray-600">¿No tienes cuenta? </span>
-                            <Link to="/register" className="text-primary font-medium hover:underline">
+                        <div className="text-center text-xs font-bold uppercase tracking-wider mt-6">
+                            <span className="text-primary/60 dark:text-beige/60">¿No tienes cuenta? </span>
+                            <Link to="/register" className="text-primary dark:text-beige hover:underline transition-all underline-offset-4">
                                 Regístrate
                             </Link>
                         </div>

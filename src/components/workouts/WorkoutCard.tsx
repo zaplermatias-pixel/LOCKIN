@@ -22,7 +22,7 @@ export function WorkoutCard({ workout, isLocked }: WorkoutCardProps) {
     const hasMultipleMedia = (workout.workout_media?.length || 0) > 1;
 
     return (
-        <Card className="overflow-hidden border-none shadow-xl bg-white/70 dark:bg-dark-card/70 backdrop-blur-sm rounded-[2.5rem] mb-8 ring-1 ring-sand/50 dark:ring-white/10 transition-colors">
+        <Card className="overflow-hidden border-2 border-sand/80 dark:border-white/20 shadow-2xl bg-white dark:bg-dark-surface backdrop-blur-md rounded-[2.5rem] mb-8 transition-colors">
             {/* Header */}
             <CardHeader className="p-5 flex flex-row items-center justify-between space-y-0">
                 <div className="flex items-center gap-3">

@@ -54,13 +54,13 @@ export function Calendar({ workouts, onSelectDate }: CalendarProps) {
     };
 
     return (
-        <div className="bg-white rounded-3xl shadow-sm border p-4 max-w-md mx-auto">
+        <div className="bg-white dark:bg-dark-surface rounded-3xl shadow-xl shadow-sand/10 dark:shadow-black/50 border-2 border-sand/80 dark:border-white/20 p-4 max-w-md mx-auto transition-colors">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
                 <Button variant="ghost" size="icon" onClick={prevMonth} className="h-8 w-8">
                     <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <h2 className="text-lg font-bold capitalize">
+                <h2 className="text-lg font-black italic uppercase tracking-tighter text-primary dark:text-beige">
                     {format(currentMonth, 'MMMM yyyy', { locale: es })}
                 </h2>
                 <Button variant="ghost" size="icon" onClick={nextMonth} className="h-8 w-8">
@@ -71,7 +71,7 @@ export function Calendar({ workouts, onSelectDate }: CalendarProps) {
             {/* Days Grid */}
             <div className="grid grid-cols-7 gap-1 mb-2">
                 {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(day => (
-                    <div key={day} className="text-center text-xs text-gray-400 font-medium py-1">
+                    <div key={day} className="text-center text-[10px] uppercase tracking-widest text-primary/40 dark:text-beige/40 font-bold py-1">
                         {day}
                     </div>
                 ))}
@@ -89,12 +89,12 @@ export function Calendar({ workouts, onSelectDate }: CalendarProps) {
                             <button
                                 onClick={() => handleDateClick(day)}
                                 className={cn(
-                                    "w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all relative",
-                                    !isCurrentMonth && "text-gray-300",
-                                    isToday(day) && !isSelected && "bg-gray-100 text-gray-900 font-bold",
-                                    isSelected && "bg-primary text-white scale-110 shadow-md ring-2 ring-primary/20",
-                                    hasWorkout && !isSelected && "bg-green-100 text-green-700 font-bold",
-                                    hasWorkout && isSelected && "bg-green-600 text-white"
+                                    "w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all relative font-bold",
+                                    !isCurrentMonth && "text-primary/20 dark:text-beige/20",
+                                    isToday(day) && !isSelected && "bg-primary/5 dark:bg-beige/5 text-primary dark:text-beige font-black border border-primary/20 dark:border-beige/20",
+                                    isSelected && "bg-primary dark:bg-beige text-white dark:text-dark-bg scale-110 shadow-lg shadow-primary/20 dark:shadow-none ring-2 ring-primary/20 dark:ring-beige/20",
+                                    hasWorkout && !isSelected && "bg-green-500/10 dark:bg-green-500/20 text-green-700 dark:text-green-400 font-black",
+                                    hasWorkout && isSelected && "bg-green-600 dark:bg-green-500 text-white dark:text-dark-bg"
                                 )}
                             >
                                 {format(day, 'd')}
@@ -116,30 +116,29 @@ export function Calendar({ workouts, onSelectDate }: CalendarProps) {
 
             {/* Selected Date Details */}
             {selectedDate && (
-                <div className="mt-4 pt-4 border-t">
-                    <h3 className="text-sm font-semibold text-gray-500 mb-2 capitalize">
+                <div className="mt-4 pt-4 border-t border-sand/30 dark:border-white/10">
+                    <h3 className="text-[11px] font-black italic uppercase tracking-widest text-primary/60 dark:text-beige/60 mb-2">
                         {format(selectedDate, 'EEEE d, MMMM', { locale: es })}
                     </h3>
                     <div className="space-y-2">
                         {getWorkoutsForDay(selectedDate).length > 0 ? (
                             getWorkoutsForDay(selectedDate).map(workout => (
-                                <div key={workout.id} className="flex items-center gap-3 p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                                    <div className="p-2 bg-white rounded-full border shadow-sm text-primary">
+                                <div key={workout.id} className="flex items-center gap-3 p-3 rounded-2xl bg-earth-bg/50 dark:bg-dark-card border border-sand/30 dark:border-white/5 shadow-sm hover:shadow-md transition-all">
+                                    <div className="p-2 bg-primary/5 dark:bg-beige/5 rounded-xl text-primary dark:text-beige">
                                         <Dumbbell className="h-4 w-4" />
                                     </div>
                                     <div className="flex-1">
-                                        <p className="text-sm font-medium capitalize">{workout.activity_type}</p>
+                                        <p className="text-sm font-black italic uppercase tracking-tighter text-primary dark:text-beige">{workout.activity_type}</p>
                                         {workout.description && (
-                                            <p className="text-xs text-gray-500 line-clamp-1">{workout.description}</p>
+                                            <p className="text-[11px] font-bold text-primary/60 dark:text-beige/60 line-clamp-1 italic">"{workout.description}"</p>
                                         )}
                                     </div>
-                                    <span className="text-xs text-gray-400">
-                                        {/* Time could go here if we had it */}
-                                    </span>
                                 </div>
                             ))
                         ) : (
-                            <p className="text-sm text-gray-400 italic text-center py-2">Sin actividad este día</p>
+                            <div className="bg-earth-bg/30 dark:bg-dark-card/30 rounded-2xl p-4 border border-dashed border-sand/50 dark:border-white/10 text-center">
+                                <p className="text-[10px] text-primary/40 dark:text-beige/40 font-black uppercase tracking-widest italic">Sin actividad registrada en este día</p>
+                            </div>
                         )}
                     </div>
                 </div>

@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useGroupDetails } from '@/hooks/useGroupDetails';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import { ChevronLeft, Users, Info, Trophy, Settings, Crown, UserPlus, MessageSquare, Send, Loader2 } from 'lucide-react';
+import { ChevronLeft, Users, Info, Trophy, Settings, Crown, UserPlus, MessageSquare, Send, Loader2, Award } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { WorkoutCard } from '@/components/workouts/WorkoutCard';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -162,7 +162,7 @@ export function GroupDetails() {
                     }}
                     className="w-full"
                 >
-                    <TabsList className="grid grid-cols-4 bg-white/90 dark:bg-dark-surface/90 backdrop-blur-xl p-2 h-auto rounded-[2.5rem] shadow-2xl border border-gray-100 dark:border-white/10 mb-10 transition-colors">
+                    <TabsList className="grid grid-cols-5 bg-white/90 dark:bg-dark-surface/90 backdrop-blur-xl p-2 h-auto rounded-[2.5rem] shadow-2xl border border-gray-100 dark:border-white/10 mb-10 transition-colors">
                         <TabsTrigger value="activity" className="rounded-[1.8rem] py-4 text-[9px] font-black italic uppercase tracking-widest gap-2 data-[state=active]:bg-primary dark:data-[state=active]:bg-beige data-[state=active]:text-white dark:data-[state=active]:text-dark-bg data-[state=active]:shadow-lg shadow-primary/20 transition-all dark:text-beige/40">
                             <Trophy className="h-3.5 w-3.5" /> Feed
                         </TabsTrigger>
@@ -174,6 +174,9 @@ export function GroupDetails() {
                         </TabsTrigger>
                         <TabsTrigger value="info" className="rounded-[1.8rem] py-4 text-[9px] font-black italic uppercase tracking-widest gap-2 data-[state=active]:bg-primary dark:data-[state=active]:bg-beige data-[state=active]:text-white dark:data-[state=active]:text-dark-bg transition-all dark:text-beige/40">
                             <Info className="h-3.5 w-3.5" /> Info
+                        </TabsTrigger>
+                        <TabsTrigger value="leaderboard" className="rounded-[1.8rem] py-4 text-[9px] font-black italic uppercase tracking-widest gap-2 data-[state=active]:bg-primary dark:data-[state=active]:bg-beige data-[state=active]:text-white dark:data-[state=active]:text-dark-bg transition-all dark:text-beige/40">
+                            <Award className="h-3.5 w-3.5" /> Rank
                         </TabsTrigger>
                     </TabsList>
 
@@ -320,6 +323,57 @@ export function GroupDetails() {
                                         </div>
                                         <div className="bg-white dark:bg-dark-surface text-[8px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-sm border border-gray-100 dark:border-white/5 group-hover:bg-primary dark:group-hover:bg-beige group-hover:text-white dark:group-hover:text-dark-bg transition-colors">
                                             {member.role === 'admin' ? 'CAPITÁN' : 'GUERRERO'}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </TabsContent>
+
+                    {/* LEADERBOARD TAB */}
+                    <TabsContent value="leaderboard" className="space-y-4 outline-none">
+                        <div className="bg-white/80 dark:bg-dark-surface/80 backdrop-blur-md rounded-[3rem] p-6 shadow-xl border border-gray-100 dark:border-white/10 transition-colors overflow-hidden">
+                            <div className="flex items-center justify-between mb-8 px-2">
+                                <h4 className="text-xs font-black uppercase tracking-[0.2em] text-primary/40 dark:text-beige/40">Ranking de Competencia</h4>
+                            </div>
+                            <div className="space-y-3">
+                                {[...members].sort((a: any, b: any) => (b.users?.current_streak || 0) - (a.users?.current_streak || 0)).map((member: any, index: number) => (
+                                    <div
+                                        key={member.id}
+                                        onClick={() => navigate(`/profile/${member.user_id}`)}
+                                        className="flex items-center justify-between p-4 rounded-2xl bg-gray-50/50 dark:bg-dark-card/30 hover:bg-primary/5 dark:hover:bg-beige/5 transition-all cursor-pointer group border border-transparent hover:border-primary/10 dark:hover:border-beige/10"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="text-xl font-black italic text-primary/40 dark:text-beige/40 w-6 text-center">
+                                                {index + 1}
+                                            </div>
+                                            <Avatar className="h-12 w-12 border-2 border-white dark:border-dark-surface shadow-md ring-2 ring-primary/5 dark:ring-beige/5">
+                                                <AvatarImage src={member.users?.profile_picture_url || ''} />
+                                                <AvatarFallback className="bg-primary/10 dark:bg-beige/10 text-primary dark:text-beige font-black italic text-xs">
+                                                    {member.users?.username?.[0]?.toUpperCase()}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="font-black text-sm text-primary dark:text-beige uppercase italic tracking-tight truncate max-w-[120px]">
+                                                        {member.users?.display_name || member.users?.username}
+                                                    </p>
+                                                    {index === 0 && member.users?.current_streak > 0 && (
+                                                        <Crown className="h-3 w-3 text-yellow-500 fill-yellow-500/20" />
+                                                    )}
+                                                </div>
+                                                <p className="text-[10px] text-primary/40 dark:text-beige/40 font-bold uppercase tracking-widest">
+                                                    @{member.users?.username}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1">
+                                            <div className="text-sm font-black italic text-primary dark:text-beige">
+                                                🔥 {member.users?.current_streak || 0}
+                                            </div>
+                                            <div className="text-[8px] font-black uppercase tracking-widest opacity-40">
+                                                Días Seguidos
+                                            </div>
                                         </div>
                                     </div>
                                 ))}

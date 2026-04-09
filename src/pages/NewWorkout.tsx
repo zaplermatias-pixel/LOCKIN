@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import confetti from 'canvas-confetti';
+import { useAuth } from '@/context/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
 import { useWorkouts } from '@/hooks/useWorkouts';
 import {
     Dumbbell,
@@ -48,6 +51,10 @@ export function NewWorkout() {
     // States
     const [loading, setLoading] = useState(true);
     const [hasWorkedOut, setHasWorkedOut] = useState(false);
+    const [justCompleted, setJustCompleted] = useState(false);
+    
+    const { user } = useAuth();
+    const { profile } = useProfile(user?.id);
     const [selectedActivity, setSelectedActivity] = useState<string>('gym');
     const [selectedMuscles, setSelectedMuscles] = useState<string[]>([]);
     const [description, setDescription] = useState('');
@@ -117,7 +124,17 @@ export function NewWorkout() {
                 muscleGroups: selectedMuscles,
                 mediaFiles
             });
-            navigate('/feed');
+
+            // Trigger Gamification & Confetti!
+            confetti({
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#000000', '#dcdac0', '#ffffff', '#4ade80']
+            });
+
+            setJustCompleted(true);
+            setHasWorkedOut(true);
         } catch (err: any) {
             setError(err.message || 'Error al publicar el entrenamiento');
         }
@@ -139,8 +156,12 @@ export function NewWorkout() {
                     <Check className="h-10 w-10 text-primary" strokeWidth={3} />
                 </div>
                 <h1 className="text-2xl font-bold">¡Objetivo Cumplido!</h1>
-                <p className="text-gray-600 italic">
-                    "La disciplina es el puente entre las metas y los logros."
+                <p className="text-primary/60 dark:text-beige/60 italic">
+                    {justCompleted && profile?.current_streak === 1 && '"¡El primer paso es el más difícil, ya estás en el camino!"'}
+                    {justCompleted && profile?.current_streak === 3 && '"¡3 días seguidos! Estás creando un hábito poderoso."'}
+                    {justCompleted && profile?.current_streak === 7 && '"¡Una semana perfecta! Eres imparable."'}
+                    {justCompleted && profile?.current_streak && profile.current_streak > 7 && `"¡Racha de ${profile.current_streak} días! Tu disciplina habla por sí misma."`}
+                    {!justCompleted && '"La disciplina es el puente entre las metas y los logros."'}
                 </p>
                 <div className="p-4 bg-gray-100 rounded-xl border border-gray-200">
                     <p className="text-sm text-gray-700">Ya has publicado tu entrenamiento de hoy. Tómate el resto del día para descansar y motivar a tus amigos en el feed.</p>
@@ -161,7 +182,7 @@ export function NewWorkout() {
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Media Upload */}
-                <Card className="border-none shadow-sm sm:border">
+                <Card className="border-2 border-sand/80 dark:border-white/20 shadow-lg bg-white dark:bg-dark-surface transition-all">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
                             Evidencia Visual
@@ -216,8 +237,8 @@ export function NewWorkout() {
                                 className={cn(
                                     "flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all",
                                     selectedActivity === activity.value
-                                        ? "border-primary bg-primary/5 text-primary shadow-sm"
-                                        : "border-gray-100 bg-white text-gray-500 hover:border-gray-200"
+                                        ? "border-primary bg-primary/5 text-primary shadow-sm dark:border-beige dark:text-beige dark:bg-beige/10"
+                                        : "border-gray-100 bg-white text-gray-500 hover:border-gray-200 dark:border-white/10 dark:bg-dark-surface dark:text-beige/70 dark:hover:border-white/20"
                                 )}
                             >
                                 <span className="text-2xl mb-1">{activity.icon}</span>
@@ -240,8 +261,8 @@ export function NewWorkout() {
                                     className={cn(
                                         "px-4 py-2 rounded-full text-xs font-semibold border-2 transition-all",
                                         selectedMuscles.includes(muscle.value)
-                                            ? "border-primary bg-primary text-white"
-                                            : "border-gray-100 bg-white text-gray-500 hover:border-gray-200"
+                                            ? "border-primary bg-primary text-white dark:bg-beige dark:border-beige dark:text-dark-bg"
+                                            : "border-gray-100 bg-white text-gray-500 hover:border-gray-200 dark:border-white/10 dark:bg-dark-surface dark:text-beige/70 dark:hover:border-white/20"
                                     )}
                                 >
                                     {muscle.label}
@@ -259,12 +280,12 @@ export function NewWorkout() {
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         placeholder="¿Cómo te has sentido? ¿Qué pesos has movido?"
-                        className="flex min-h-[100px] w-full rounded-xl border border-input bg-white px-4 py-3 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex min-h-[100px] w-full rounded-xl border border-input bg-white dark:bg-dark-surface dark:text-beige px-4 py-3 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
                     />
                 </div>
 
                 {/* Music (Optional) */}
-                <Card className="border-none shadow-sm sm:border bg-gray-50/50">
+                <Card className="border-2 border-sand/80 dark:border-white/20 shadow-lg bg-white dark:bg-dark-surface transition-all">
                     <CardContent className="pt-6 space-y-4">
                         <Label className="text-sm font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
                             <Music className="h-4 w-4" />
@@ -275,7 +296,7 @@ export function NewWorkout() {
                                 <div className="absolute left-3 top-3 h-4 w-4 text-gray-400">🎵</div>
                                 <Input
                                     placeholder="Canción"
-                                    className="pl-9 h-11 rounded-xl bg-white border-none shadow-sm"
+                                    className="pl-9 h-11 rounded-xl bg-white dark:bg-dark-surface dark:text-beige border-none shadow-sm transition-colors"
                                     value={songName}
                                     onChange={(e) => setSongName(e.target.value)}
                                 />
@@ -284,7 +305,7 @@ export function NewWorkout() {
                                 <div className="absolute left-3 top-3 h-4 w-4 text-gray-400">👤</div>
                                 <Input
                                     placeholder="Artista"
-                                    className="pl-9 h-11 rounded-xl bg-white border-none shadow-sm"
+                                    className="pl-9 h-11 rounded-xl bg-white dark:bg-dark-surface dark:text-beige border-none shadow-sm transition-colors"
                                     value={songArtist}
                                     onChange={(e) => setSongArtist(e.target.value)}
                                 />

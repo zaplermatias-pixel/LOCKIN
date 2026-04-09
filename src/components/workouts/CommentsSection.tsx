@@ -48,7 +48,7 @@ export function CommentsSection({ workoutId, isLocked, className }: CommentsSect
             {/* Header / Toggle */}
             <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="flex items-center gap-2 text-xs font-black uppercase italic tracking-widest text-primary/40 hover:text-primary transition-colors"
+                className="flex items-center gap-2 text-xs font-black uppercase italic tracking-widest text-primary/40 dark:text-beige/40 hover:text-primary dark:hover:text-beige transition-colors"
             >
                 <MessageSquare className="h-4 w-4" />
                 <span>
@@ -66,7 +66,7 @@ export function CommentsSection({ workoutId, isLocked, className }: CommentsSect
                                 <Spinner size="sm" />
                             </div>
                         ) : comments.length === 0 ? (
-                            <p className="text-center py-4 text-xs font-bold text-gray-400 italic">No hay comentarios aún. ¡Sé el primero!</p>
+                            <p className="text-center py-4 text-xs font-bold text-gray-400 dark:text-beige/40 italic">No hay comentarios aún. ¡Sé el primero!</p>
                         ) : (
                             comments.map((comment) => (
                                 <div key={comment.id} className="group flex gap-3">
@@ -78,15 +78,15 @@ export function CommentsSection({ workoutId, isLocked, className }: CommentsSect
                                     </Avatar>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between gap-2">
-                                            <p className="text-[11px] font-black italic text-gray-900">
+                                            <p className="text-[11px] font-black italic text-gray-900 dark:text-beige">
                                                 {comment.user.display_name}
                                             </p>
-                                            <span className="text-[9px] font-bold text-gray-400">
+                                            <span className="text-[9px] font-bold text-gray-400 dark:text-beige/40">
                                                 {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: es })}
                                             </span>
                                         </div>
                                         <div className="relative group/content flex items-start justify-between gap-2">
-                                            <p className="text-sm text-gray-600 leading-tight">
+                                            <p className="text-sm text-gray-600 dark:text-beige/80 leading-tight">
                                                 {comment.content}
                                             </p>
                                             {currentUser?.id === comment.user_id && (
@@ -111,7 +111,7 @@ export function CommentsSection({ workoutId, isLocked, className }: CommentsSect
                             onChange={(e) => setNewComment(e.target.value)}
                             placeholder="Escribe un comentario..."
                             disabled={isSubmitting}
-                            className="h-9 rounded-xl bg-gray-50 border-transparent focus:bg-white text-sm"
+                            className="h-9 rounded-xl bg-gray-50 dark:bg-dark-surface/50 border-transparent focus:bg-white dark:focus:bg-dark-surface dark:text-beige text-sm transition-colors"
                         />
                         <Button
                             type="submit"

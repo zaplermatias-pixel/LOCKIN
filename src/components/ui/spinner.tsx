@@ -14,7 +14,7 @@ export function Spinner({ className, size = 'md' }: SpinnerProps) {
 
     return (
         <div className={cn(
-            "animate-spin rounded-full border-primary/30 border-t-primary",
+            "animate-spin rounded-full border-primary/30 border-t-primary dark:border-beige/30 dark:border-t-beige",
             sizeClasses[size],
             className
         )}></div>
@@ -23,9 +23,9 @@ export function Spinner({ className, size = 'md' }: SpinnerProps) {
 
 export function LoadingPage() {
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
+        <div className="min-h-screen flex flex-col items-center justify-center bg-earth-bg dark:bg-dark-bg transition-colors duration-300">
             <Spinner size="lg" />
-            <p className="mt-4 text-gray-600 font-medium">Cargando LockIn...</p>
+            <p className="mt-4 text-primary/80 dark:text-beige/80 font-bold uppercase tracking-widest text-sm">Cargando LockIn...</p>
         </div>
     );
 }

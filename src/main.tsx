@@ -5,6 +5,18 @@ import { AuthProvider } from './context/AuthContext'
 import { ErrorBoundary } from 'react-error-boundary'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
+import { registerSW } from 'virtual:pwa-register'
+
+const updateSW = registerSW({
+  onNeedRefresh() {
+    if (confirm("Hay una nueva versión de Lock-In disponible. ¿Deseas actualizar?")) {
+      updateSW(true);
+    }
+  },
+  onOfflineReady() {
+    console.log('La aplicación está lista para funcionar offline.')
+  },
+})
 
 const queryClient = new QueryClient({
   defaultOptions: {

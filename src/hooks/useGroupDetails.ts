@@ -33,7 +33,9 @@ export function useGroupDetails(groupId: string) {
                     users (
                         username,
                         display_name,
-                        profile_picture_url
+                        profile_picture_url,
+                        current_streak,
+                        total_workouts
                     )
                 `)
                 .eq('group_id', groupId);

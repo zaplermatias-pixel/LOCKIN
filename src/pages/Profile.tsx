@@ -35,7 +35,7 @@ export function Profile() {
         return (
             <div className="flex flex-col items-center justify-center py-20">
                 <Spinner size="lg" />
-                <p className="mt-4 text-gray-500">Cargando perfil...</p>
+                <p className="mt-4 text-primary/60 dark:text-beige/60 font-bold uppercase tracking-widest text-sm">Cargando perfil...</p>
             </div>
         );
     }
@@ -65,8 +65,8 @@ export function Profile() {
     return (
         <div className="max-w-2xl mx-auto space-y-6 pb-20 transition-colors">
             {/* Profile Header */}
-            <Card className="overflow-hidden border-none shadow-sm sm:border bg-white dark:bg-dark-surface dark:border-white/10 transition-colors">
-                <div className="h-24 bg-gradient-to-r from-primary/20 to-primary/10 dark:from-beige/10 dark:to-beige/5" />
+            <Card className="overflow-hidden border-2 border-sand/80 dark:border-white/20 shadow-2xl bg-white dark:bg-dark-surface transition-all">
+                <div className="h-24 bg-gradient-to-r from-primary/20 to-primary/10 dark:from-beige/20 dark:to-beige/10" />
                 <CardContent className="relative pt-0 pb-6 px-4 sm:px-6">
                     <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between -mt-12 gap-4">
                         <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 text-center sm:text-left">
@@ -124,7 +124,7 @@ export function Profile() {
             {/* Stats Grid */}
             <div className="grid grid-cols-3 gap-4">
                 {stats.map((stat) => (
-                    <Card key={stat.label} className="border-none shadow-sm sm:border bg-white dark:bg-dark-surface dark:border-white/10 transition-colors">
+                    <Card key={stat.label} className="border-2 border-sand/80 dark:border-white/20 shadow-lg bg-white dark:bg-dark-surface transition-all">
                         <CardContent className="p-4 flex flex-col items-center justify-center text-center">
                             <stat.icon className="h-5 w-5 text-primary dark:text-beige mb-1 opacity-80" />
                             <span className="text-xl font-black italic uppercase text-primary dark:text-beige">{stat.value}</span>
@@ -144,7 +144,7 @@ export function Profile() {
                 </h2>
 
                 {workoutsLoading ? (
-                    <div className="h-64 bg-gray-50 rounded-3xl flex items-center justify-center">
+                    <div className="h-64 bg-sand/20 dark:bg-dark-surface/50 rounded-3xl flex items-center justify-center border border-sand/30 dark:border-white/5">
                         <Spinner />
                     </div>
                 ) : (

@@ -113,6 +113,24 @@ export function useWorkouts(userId?: string) {
                 if (muscleError) throw muscleError;
             }
 
+            // 4. Notificar a los grupos (Lock-Ins)
+            const { data: userGroups } = await supabase
+                .from('group_members')
+                .select('group_id')
+                .eq('user_id', user.id);
+
+            if (userGroups && userGroups.length > 0) {
+                const announcement = `@${user.username} desbloqueó su feed`;
+                
+                const groupNotifications = userGroups.map(g => ({
+                    group_id: g.group_id,
+                    user_id: user.id,
+                    content: announcement
+                }));
+
+                await supabase.from('group_messages').insert(groupNotifications);
+            }
+
             return workout;
         },
         onSuccess: () => {

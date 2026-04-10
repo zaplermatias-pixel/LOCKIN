@@ -51,6 +51,7 @@ export function useFeed() {
                     )
                 `)
                 .eq('is_deleted', false)
+                .eq('workout_date', today)
                 .order('created_at', { ascending: false })
                 .limit(20);
 

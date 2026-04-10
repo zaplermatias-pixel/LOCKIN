@@ -47,6 +47,7 @@ export function useGroupDetails(groupId: string) {
             const userIds = memberData.map(m => m.user_id);
 
             if (userIds.length > 0) {
+                const today = new Date().toISOString().split('T')[0];
                 const { data: workoutData, error: workoutError } = await supabase
                     .from('workouts')
                     .select(`
@@ -70,7 +71,8 @@ export function useGroupDetails(groupId: string) {
                     `)
                     .in('user_id', userIds)
                     .eq('is_deleted', false)
-                    .order('workout_date', { ascending: false })
+                    .eq('workout_date', today)
+                    .order('created_at', { ascending: false })
                     .limit(20);
 
                 if (workoutError) throw workoutError;

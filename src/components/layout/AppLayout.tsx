@@ -30,6 +30,7 @@ export function AppLayout() {
     const { user, session, signOut } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
     const [isDarkMode, setIsDarkMode] = useState(() => {
         return localStorage.getItem('theme') === 'dark' ||
@@ -49,6 +50,7 @@ export function AppLayout() {
     const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
 
     const handleSignOut = async () => {
+        setShowLogoutConfirm(false);
         await signOut();
         navigate('/');
     };
@@ -134,7 +136,7 @@ export function AppLayout() {
                                 <span>Configuración</span>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator className="bg-sand/30 dark:bg-white/10" />
-                            <DropdownMenuItem onClick={handleSignOut} className="rounded-xl font-bold text-accent focus:bg-accent focus:text-white transition-all">
+                            <DropdownMenuItem onClick={() => setShowLogoutConfirm(true)} className="rounded-xl font-bold text-accent focus:bg-accent focus:text-white transition-all">
                                 <LogOut className="mr-2 h-4 w-4" />
                                 <span>Cerrar Sesión</span>
                             </DropdownMenuItem>
@@ -151,7 +153,6 @@ export function AppLayout() {
                             <Dumbbell className="h-6 w-6" />
                             <span className="italic tracking-tighter uppercase font-black">LockIn</span>
                         </Link>
-                        20
                         <div className="flex items-center gap-2">
                             <Button
                                 variant="ghost"
@@ -187,7 +188,7 @@ export function AppLayout() {
                                         <span>Configuración</span>
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator className="bg-sand/30 dark:bg-white/10" />
-                                    <DropdownMenuItem onClick={handleSignOut} className="rounded-xl font-bold text-accent focus:bg-accent focus:text-white transition-all">
+                                    <DropdownMenuItem onClick={() => setShowLogoutConfirm(true)} className="rounded-xl font-bold text-accent focus:bg-accent focus:text-white transition-all">
                                         <LogOut className="mr-2 h-4 w-4" />
                                         <span>Cerrar Sesión</span>
                                     </DropdownMenuItem>
@@ -227,6 +228,31 @@ export function AppLayout() {
                     </div>
                 </nav>
             </div>
+
+            {/* Logout Confirmation Dialog */}
+            {showLogoutConfirm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowLogoutConfirm(false)} />
+                    <div className="relative bg-white dark:bg-dark-surface rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl border-2 border-sand/80 dark:border-white/20 animate-in zoom-in-95 duration-200">
+                        <h2 className="text-xl font-black italic uppercase tracking-tighter text-primary dark:text-beige mb-2">¿Cerrar Sesión?</h2>
+                        <p className="text-sm text-primary/60 dark:text-beige/60 font-bold mb-8">Tendrás que volver a iniciar sesión para acceder a tu cuenta.</p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowLogoutConfirm(false)}
+                                className="flex-1 h-12 rounded-2xl bg-sand/40 dark:bg-white/5 text-primary dark:text-beige font-black text-sm uppercase tracking-widest hover:bg-sand dark:hover:bg-white/10 transition-all"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleSignOut}
+                                className="flex-1 h-12 rounded-2xl bg-accent text-white font-black text-sm uppercase tracking-widest hover:opacity-90 transition-all shadow-lg shadow-accent/20"
+                            >
+                                Cerrar Sesión
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

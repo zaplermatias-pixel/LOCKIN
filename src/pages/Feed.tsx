@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useFeed } from '@/hooks/useFeed';
 import { WorkoutCard } from '@/components/workouts/WorkoutCard';
-import { Spinner } from '@/components/ui/spinner';
+import { WorkoutCardSkeleton } from '@/components/workouts/WorkoutCardSkeleton';
 import { Button } from '@/components/ui/button';
 import {
     Lock,
@@ -23,13 +23,16 @@ export function Feed() {
 
     if (loading && workouts.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-                <div className="relative mb-6">
-                    <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl animate-pulse" />
-                    <Spinner size="lg" className="relative z-10" />
+            <div className="pb-10 max-w-lg mx-auto">
+                <header className="mb-8 px-4">
+                    <h1 className="text-4xl font-black text-primary dark:text-beige italic uppercase tracking-tighter leading-none">Feed</h1>
+                    <p className="text-[10px] font-bold text-primary/40 dark:text-beige/40 uppercase tracking-[0.2em] mt-2">Actividad de tus amigos</p>
+                </header>
+                <div className="space-y-6 px-2">
+                    <WorkoutCardSkeleton />
+                    <WorkoutCardSkeleton />
+                    <WorkoutCardSkeleton />
                 </div>
-                <h3 className="text-xl font-black italic tracking-tighter uppercase mb-2">Preparando tu Feed</h3>
-                <p className="text-gray-500 text-sm font-medium">Sincronizando los últimos Lock-Ins...</p>
             </div>
         );
     }

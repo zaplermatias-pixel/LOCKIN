@@ -1,16 +1,20 @@
+import { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import {
-    Share2,
-    Lock,
-    Music,
-    MessageCircle
-} from 'lucide-react';
+import { Share2, Lock, Music, Zap } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { CommentsSection } from './CommentsSection';
+import { useMotivate } from '@/hooks/useMotivate';
 import type { WorkoutWithDetails } from '@/types/database.types';
+
+const MUSCLE_LABELS: Record<string, string> = {
+    chest: 'Pecho', back: 'Espalda', legs: 'Piernas',
+    shoulders: 'Hombros', arms: 'Brazos', abs: 'Abdominales',
+    glutes: 'Glúteos', cardio: 'Cardio', full_body: 'Cuerpo Completo'
+};
 
 interface WorkoutCardProps {
     workout: WorkoutWithDetails;
@@ -18,14 +22,41 @@ interface WorkoutCardProps {
 }
 
 export function WorkoutCard({ workout, isLocked }: WorkoutCardProps) {
-    const mainMedia = workout.workout_media?.[0]?.media_url;
+    const navigate = useNavigate();
+    const [currentSlide, setCurrentSlide] = useState(0);
     const hasMultipleMedia = (workout.workout_media?.length || 0) > 1;
+    const { count: motivateCount, hasMotivated, toggleMotivate } = useMotivate(workout.id);
+
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const scrollPosition = e.currentTarget.scrollLeft;
+        const width = e.currentTarget.offsetWidth;
+        const newSlide = Math.round(scrollPosition / width);
+        if (newSlide !== currentSlide) {
+            setCurrentSlide(newSlide);
+        }
+    };
+
+    const handleShare = async () => {
+        const shareData = {
+            title: `Entrenamiento de ${workout.users?.display_name}`,
+            text: workout.description || `¡${workout.users?.display_name} desbloquó su Lock-In hoy!`,
+            url: `${window.location.origin}/workout/${workout.id}`,
+        };
+        if (navigator.share) {
+            await navigator.share(shareData);
+        } else {
+            await navigator.clipboard.writeText(shareData.url);
+        }
+    };
 
     return (
         <Card className="overflow-hidden border-2 border-sand/80 dark:border-white/20 shadow-2xl bg-white dark:bg-dark-surface backdrop-blur-md rounded-[2.5rem] mb-8 transition-colors">
             {/* Header */}
             <CardHeader className="p-5 flex flex-row items-center justify-between space-y-0">
-                <div className="flex items-center gap-3">
+                <div
+                    className="flex items-center gap-3 cursor-pointer"
+                    onClick={() => navigate(`/profile/${workout.users?.id}`)}
+                >
                     <Avatar className="h-11 w-11 border-2 border-primary/10 shadow-sm">
                         <AvatarImage src={workout.users?.profile_picture_url || ''} />
                         <AvatarFallback className="bg-primary/5 text-primary text-xs font-black italic">
@@ -68,24 +99,48 @@ export function WorkoutCard({ workout, isLocked }: WorkoutCardProps) {
                         <p className="text-sm font-bold opacity-70 max-w-[220px] leading-snug">Publica tu sesión de hoy para desbloquear el feed de tus amigos.</p>
                     </div>
                 ) : (
-                    mainMedia && (
-                        <img
-                            src={mainMedia}
-                            alt="Workout"
-                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                        />
-                    )
+                    <div 
+                        className="flex h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
+                        onScroll={handleScroll}
+                    >
+                        {workout.workout_media?.map((media, idx) => (
+                            <div key={media.id} className="min-w-full h-full snap-center flex-shrink-0">
+                                <img
+                                    src={media.media_url}
+                                    alt={`Workout ${idx + 1}`}
+                                    onClick={() => !isLocked && navigate(`/workout/${workout.id}`)}
+                                    className={`w-full h-full object-cover transition-transform duration-700 ${!isLocked ? 'cursor-pointer' : ''}`}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Slide Indicators */}
+                {!isLocked && hasMultipleMedia && (
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
+                        {workout.workout_media.map((_, idx) => (
+                            <div 
+                                key={idx}
+                                className={`h-1 rounded-full transition-all duration-300 ${
+                                    idx === currentSlide 
+                                        ? 'w-4 bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]' 
+                                        : 'w-1 bg-white/40'
+                                }`}
+                            />
+                        ))}
+                    </div>
                 )}
 
                 {!isLocked && hasMultipleMedia && (
-                    <div className="absolute top-4 right-4 bg-black/40 text-white text-[10px] font-bold px-3 py-1.5 rounded-full backdrop-blur-md border border-white/10 uppercase tracking-widest">
+                    <div className="absolute top-4 right-4 bg-black/40 text-white text-[10px] font-bold px-3 py-1.5 rounded-full backdrop-blur-md border border-white/10 uppercase tracking-widest z-10">
                         {workout.workout_media.length} Archivos
                     </div>
                 )}
 
                 {/* Overlays for Music or Stats */}
                 {!isLocked && workout.song_name && (
-                    <div className="absolute bottom-4 left-4 right-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="absolute bottom-4 left-4 right-4 animate-in fade-in slide-in-from-bottom-4 duration-500 z-10">
                         <div className="bg-earth-bg/60 backdrop-blur-xl border border-white/40 rounded-3xl p-4 flex items-center gap-4 text-primary shadow-2xl">
                             <div className="bg-primary p-3 rounded-2xl animate-pulse-slow shadow-lg shadow-primary/10">
                                 <Music className="h-5 w-5 text-white fill-current" />
@@ -111,7 +166,7 @@ export function WorkoutCard({ workout, isLocked }: WorkoutCardProps) {
                     <div className="flex flex-wrap gap-2 pt-1">
                         {workout.workout_muscles.map((m, i) => (
                             <span key={i} className="bg-primary/5 dark:bg-beige/5 text-primary dark:text-beige text-[10px] font-black px-4 py-1.5 rounded-xl border border-primary/10 dark:border-beige/10 uppercase tracking-widest shadow-sm">
-                                {m.muscle_group}
+                                {MUSCLE_LABELS[m.muscle_group] || m.muscle_group}
                             </span>
                         ))}
                     </div>
@@ -122,26 +177,24 @@ export function WorkoutCard({ workout, isLocked }: WorkoutCardProps) {
 
             {/* Footer Actions */}
             <CardFooter className="p-6 pt-0 flex items-center gap-4">
-                <Button variant="ghost" size="sm" className="rounded-2xl gap-2 px-6 h-12 bg-primary/5 dark:bg-beige/5 hover:bg-primary dark:hover:bg-beige hover:text-white dark:hover:text-dark-bg text-primary dark:text-beige transition-all font-black uppercase italic tracking-tighter flex-1 shadow-sm">
-                    <MessageCircle className="h-4 w-4" />
-                    <span>Motivar</span>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={isLocked}
+                    onClick={toggleMotivate}
+                    className={`rounded-2xl gap-2 px-6 h-12 transition-all font-black uppercase italic tracking-tighter flex-1 shadow-sm ${
+                        hasMotivated
+                            ? 'bg-primary text-white dark:bg-beige dark:text-dark-bg shadow-lg shadow-primary/20'
+                            : 'bg-primary/5 dark:bg-beige/5 hover:bg-primary dark:hover:bg-beige hover:text-white dark:hover:text-dark-bg text-primary dark:text-beige'
+                    }`}
+                >
+                    <Zap className={`h-4 w-4 ${hasMotivated ? 'fill-current' : ''}`} />
+                    <span>Motivar {motivateCount > 0 && `· ${motivateCount}`}</span>
                 </Button>
-                <Button variant="ghost" size="icon" className="rounded-2xl h-12 w-12 bg-accent/5 dark:bg-accent/10 hover:bg-accent hover:text-white text-accent transition-all shadow-sm">
+                <Button variant="ghost" size="icon" onClick={handleShare} className="rounded-2xl h-12 w-12 bg-accent/5 dark:bg-accent/10 hover:bg-accent hover:text-white text-accent transition-all shadow-sm">
                     <Share2 className="h-5 w-5" />
                 </Button>
             </CardFooter>
         </Card>
     );
 }
-
-const style = document.createElement('style');
-style.innerHTML = `
-  @keyframes pulse-slow {
-    0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.05); opacity: 0.9; }
-  }
-  .animate-pulse-slow {
-    animation: pulse-slow 3s infinite ease-in-out;
-  }
-`;
-document.head.appendChild(style);

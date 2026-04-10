@@ -12,6 +12,7 @@ import { GroupSettingsDialog } from '@/components/groups/GroupSettingsDialog';
 import { useAuth } from '@/context/AuthContext';
 import { useGroupMessages } from '@/hooks/useGroupMessages';
 import { Input } from '@/components/ui/input';
+import { supabase } from '@/lib/supabase';
 
 export function GroupDetails() {
     const { user } = useAuth();
@@ -20,50 +21,76 @@ export function GroupDetails() {
     const initialTab = searchParams.get('tab') || 'activity';
 
     const navigate = useNavigate();
-    const { group, members, activity, loading, fetchDetails } = useGroupDetails(groupId || '');
+    
+    // React Query maneja el estado y la caché automáticamente 🚀
+    const { 
+        group, 
+        members, 
+        activity, 
+        loading: detailsLoading, 
+        fetchDetails 
+    } = useGroupDetails(groupId || '');
+
+    const { 
+        messages, 
+        loading: messagesLoading, 
+        sendGroupMessage, 
+        markAsRead,
+        isSending
+    } = useGroupMessages(groupId || '');
+
     const [isInviteOpen, setIsInviteOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+    const [isLeaving, setIsLeaving] = useState(false);
     const [groupMessage, setGroupMessage] = useState('');
-    const [isSending, setIsSending] = useState(false);
     const [activeTab, setActiveTab] = useState(initialTab);
     const scrollRef = useRef<HTMLDivElement>(null);
 
-    const { messages, loading: messagesLoading, fetchMessages, sendGroupMessage, markAsRead } = useGroupMessages(groupId || '');
-
     const isAdmin = members.find(m => m.user_id === user?.id)?.role === 'admin';
 
-    useEffect(() => {
-        fetchDetails();
-        fetchMessages();
-    }, [fetchDetails, fetchMessages]);
-
-    // Scroll to bottom on new messages if in chat tab
+    // Auto-scroll al final del chat
     useEffect(() => {
         if (activeTab === 'chat' && scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
 
-            // Mark as read if a new message arrived while we are looking at the chat
             if (messages.length > 0) {
                 markAsRead(messages[messages.length - 1].id);
             }
         }
     }, [messages, activeTab, markAsRead]);
 
+    const handleLeaveGroup = async () => {
+        if (!user || !groupId || isLeaving) return;
+        setIsLeaving(true);
+        try {
+            const { error } = await supabase
+                .from('group_members')
+                .delete()
+                .eq('group_id', groupId)
+                .eq('user_id', user.id);
+            if (error) throw error;
+            navigate('/groups');
+        } catch (err) {
+            console.error('Error leaving group:', err);
+        } finally {
+            setIsLeaving(false);
+            setShowLeaveConfirm(false);
+        }
+    };
+
     const handleSendGroupMessage = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!groupMessage.trim() || isSending) return;
-        setIsSending(true);
         try {
             await sendGroupMessage(groupMessage);
             setGroupMessage('');
         } catch (error) {
             console.error('Failed to send group message:', error);
-        } finally {
-            setIsSending(false);
         }
     };
 
-    if (loading && !group) {
+    if (detailsLoading && !group) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
                 <div className="relative">
@@ -93,7 +120,6 @@ export function GroupDetails() {
         <div className="pb-32">
             {/* Header / Cover */}
             <div className="relative bg-primary text-white pt-12 pb-24 px-6 rounded-b-[4rem] shadow-2xl shadow-primary/20 overflow-hidden">
-                {/* Visual Flair */}
                 <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full -mr-20 -mt-20 blur-3xl animate-pulse" />
                 <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full -ml-10 -mb-10 blur-2xl" />
 
@@ -200,7 +226,6 @@ export function GroupDetails() {
                     {/* GROUP CHAT TAB */}
                     <TabsContent value="chat" className="space-y-4 outline-none">
                         <div className="bg-white/80 dark:bg-dark-surface/80 backdrop-blur-md rounded-[3rem] p-6 shadow-xl border border-gray-100 dark:border-white/10 flex flex-col min-h-[500px] max-h-[600px] transition-colors">
-                            {/* Messages Container */}
                             <div
                                 ref={scrollRef}
                                 className="flex-1 overflow-y-auto space-y-4 mb-6 pr-2 scrollbar-thin scrollbar-thumb-primary/10"
@@ -254,7 +279,6 @@ export function GroupDetails() {
                                 )}
                             </div>
 
-                            {/* Input Form */}
                             <form onSubmit={handleSendGroupMessage} className="flex gap-3 bg-gray-50 dark:bg-dark-card/50 p-2 rounded-[2rem] border border-transparent focus-within:border-primary/20 dark:focus-within:border-beige/20 transition-all shadow-inner">
                                 <Input
                                     value={groupMessage}
@@ -276,7 +300,6 @@ export function GroupDetails() {
                             </form>
                         </div>
                     </TabsContent>
-
 
                     {/* MEMBERS TAB */}
                     <TabsContent value="members" className="space-y-4 outline-none">
@@ -414,8 +437,13 @@ export function GroupDetails() {
                                     </div>
                                 </div>
 
-                                <Button variant="outline" className="w-full rounded-2xl h-14 border-red-100 text-red-500 hover:bg-red-50 font-black uppercase italic text-xs tracking-widest gap-2">
-                                    Abandonar Lock-In
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setShowLeaveConfirm(true)}
+                                    disabled={isAdmin}
+                                    className="w-full rounded-2xl h-14 border-red-200 dark:border-red-900/40 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 font-black uppercase italic text-xs tracking-widest gap-2 disabled:opacity-30"
+                                >
+                                    {isAdmin ? 'El admin no puede abandonar' : 'Abandonar Lock-In'}
                                 </Button>
                             </div>
                         </div>
@@ -434,8 +462,34 @@ export function GroupDetails() {
                     group={group}
                     isOpen={isSettingsOpen}
                     onOpenChange={setIsSettingsOpen}
-                    onUpdate={fetchDetails}
+                    onUpdate={() => fetchDetails()}
                 />
+            )}
+
+            {/* Leave Group Confirmation */}
+            {showLeaveConfirm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowLeaveConfirm(false)} />
+                    <div className="relative bg-white dark:bg-dark-surface rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl border-2 border-sand/80 dark:border-white/20 animate-in zoom-in-95 duration-200">
+                        <h2 className="text-xl font-black italic uppercase tracking-tighter text-primary dark:text-beige mb-2">¿Abandonar {group?.name}?</h2>
+                        <p className="text-sm text-primary/60 dark:text-beige/60 font-bold mb-8">Perderás acceso al grupo y tendrás que ser invitado nuevamente.</p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowLeaveConfirm(false)}
+                                className="flex-1 h-12 rounded-2xl bg-sand/40 dark:bg-white/5 text-primary dark:text-beige font-black text-sm uppercase tracking-widest hover:bg-sand dark:hover:bg-white/10 transition-all"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleLeaveGroup}
+                                disabled={isLeaving}
+                                className="flex-1 h-12 rounded-2xl bg-red-500 text-white font-black text-sm uppercase tracking-widest hover:bg-red-600 transition-all shadow-lg shadow-red-500/20 disabled:opacity-50"
+                            >
+                                {isLeaving ? 'Saliendo...' : 'Abandonar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

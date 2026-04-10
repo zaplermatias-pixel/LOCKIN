@@ -31,8 +31,20 @@ export function useFeed() {
             const finishedToday = !!todayWorkout;
             setHasWorkedOutToday(finishedToday);
 
-            // 2. Obtener entrenamientos (propios y de amigos/públicos)
-            // Por ahora, para el MVP y desarrollo, mostraremos todos los públicos + propios
+            // 2. Obtener IDs de personas que el usuario sigue
+            const { data: following } = await supabase
+                .from('friendships')
+                .select('followed_id')
+                .eq('follower_id', user.id)
+                .eq('status', 'accepted');
+
+            // Incluir al propio usuario + amigos
+            const friendIds = [
+                user.id,
+                ...(following?.map(f => f.followed_id) ?? [])
+            ];
+
+            // 3. Obtener entrenamientos de hoy solo de esos usuarios
             const { data, error: fetchError } = await supabase
                 .from('workouts')
                 .select(`
@@ -50,6 +62,7 @@ export function useFeed() {
                         muscle_group
                     )
                 `)
+                .in('user_id', friendIds)
                 .eq('is_deleted', false)
                 .eq('workout_date', today)
                 .order('created_at', { ascending: false })

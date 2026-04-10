@@ -1,26 +1,23 @@
-import { useState, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import type { Group } from '@/types/database.types';
 
 export function useGroups() {
     const { user } = useAuth();
-    const [groups, setGroups] = useState<Group[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const queryClient = useQueryClient();
 
-    const fetchGroups = useCallback(async () => {
-        if (!user) {
-            console.log('useGroups: [SKIP] No user');
-            setLoading(false);
-            return;
-        }
-        console.log('useGroups: [START] Fetching groups');
-        setLoading(true);
-        setError(null);
-        try {
-            // Fetch groups where the user is a member
-            const { data: memberships, error: memberError } = await supabase
+    // 1. Fetch Groups Query
+    const { 
+        data: groups = [], 
+        isLoading: loadingGroups, 
+        error: groupsError,
+        refetch: fetchGroups 
+    } = useQuery({
+        queryKey: ['groups', user?.id],
+        queryFn: async () => {
+            if (!user) return [];
+            const { data: memberships, error } = await supabase
                 .from('group_members')
                 .select(`
                     group_id,
@@ -28,82 +25,79 @@ export function useGroups() {
                 `)
                 .eq('user_id', user.id);
 
-            if (memberError) throw memberError;
-
-            // Extract the actual group objects
-            const userGroups = (memberships as any[])
+            if (error) throw error;
+            return (memberships as any[])
                 .map(m => m.groups)
                 .filter(g => g !== null) as unknown as Group[];
+        },
+        enabled: !!user,
+    });
 
-            setGroups(userGroups);
-        } catch (err: any) {
-            console.error('Error fetching groups:', err);
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    }, [user]);
+    // 2. Fetch Invites Query
+    const { 
+        data: invites = [], 
+        isLoading: loadingInvites,
+        refetch: fetchInvites
+    } = useQuery({
+        queryKey: ['group-invites', user?.id],
+        queryFn: async () => {
+            if (!user) return [];
+            const { data, error: inviteError } = await supabase
+                .from('group_invites')
+                .select(`
+                    *,
+                    groups (*),
+                    inviter:inviter_id (username, display_name)
+                `)
+                .eq('invitee_id', user.id)
+                .eq('status', 'pending');
 
-    const createGroup = async (name: string, description: string, isPrivate: boolean = false) => {
-        if (!user) return null;
-        try {
-            // 1. Create Group
+            if (inviteError) throw inviteError;
+            return data || [];
+        },
+        enabled: !!user,
+    });
+
+    // 3. Create Group Mutation
+    const createGroupMutation = useMutation({
+        mutationFn: async ({ name, description, isPrivate = false }: { name: string, description: string, isPrivate?: boolean }) => {
+            if (!user) throw new Error('Usuario no autenticado');
+
             const { data: group, error: createError } = await supabase
                 .from('groups')
-                .insert({
-                    name,
-                    description,
-                    is_private: isPrivate,
-                    created_by: user.id
-                })
+                .insert({ name, description, is_private: isPrivate, created_by: user.id })
                 .select()
                 .single();
 
             if (createError) throw createError;
             if (!group) throw new Error('Failed to create group');
 
-            // 2. Add creator as admin
             const { error: memberError } = await supabase
                 .from('group_members')
-                .insert({
-                    group_id: group.id,
-                    user_id: user.id,
-                    role: 'admin'
-                });
+                .insert({ group_id: group.id, user_id: user.id, role: 'admin' });
 
-            if (memberError) {
-                // Rollback (optional but good practice) - for now just throw
-                throw memberError;
-            }
-
-            // Refresh list
-            await fetchGroups();
+            if (memberError) throw memberError;
             return group;
-        } catch (err: any) {
-            console.error('Error creating group:', err);
-            throw err;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['groups', user?.id] });
         }
-    };
+    });
 
-    const inviteMember = async (groupId: string, inviteeId: string) => {
-        if (!user) return null;
-        try {
+    // 4. Invite Member Mutation
+    const inviteMemberMutation = useMutation({
+        mutationFn: async ({ groupId, inviteeId }: { groupId: string, inviteeId: string }) => {
+            if (!user) return null;
             const { data, error: inviteError } = await supabase
                 .from('group_invites')
-                .insert({
-                    group_id: groupId,
-                    inviter_id: user.id,
-                    invitee_id: inviteeId,
-                    status: 'pending'
-                })
+                .insert({ group_id: groupId, inviter_id: user.id, invitee_id: inviteeId, status: 'pending' })
                 .select()
                 .single();
 
             if (inviteError) throw inviteError;
 
-            // Create notification for the invitee
+            // Notification
             try {
-                // Get group name first for the message
                 const { data: groupData } = await supabase
                     .from('groups')
                     .select('name')
@@ -117,43 +111,17 @@ export function useGroups() {
                     resource_id: groupId,
                     message: `te invitó al grupo "${groupData?.name || 'un grupo'}"`
                 });
-            } catch (notifErr) {
-                console.error('Error creating notification for group invite:', notifErr);
+            } catch (err) {
+                console.error('Error sending notification:', err);
             }
-
             return data;
-        } catch (err: any) {
-            console.error('Error sending invite:', err);
-            throw err;
         }
-    };
+    });
 
-    const [invites, setInvites] = useState<any[]>([]);
-
-    const fetchInvites = useCallback(async () => {
-        if (!user) return;
-        try {
-            const { data, error: inviteError } = await supabase
-                .from('group_invites')
-                .select(`
-                    *,
-                    groups (*),
-                    inviter:inviter_id (username, display_name)
-                `)
-                .eq('invitee_id', user.id)
-                .eq('status', 'pending');
-
-            if (inviteError) throw inviteError;
-            setInvites(data || []);
-        } catch (err) {
-            console.error('Error fetching invites:', err);
-        }
-    }, [user]);
-
-    const respondToInvite = async (inviteId: string, groupId: string, status: 'accepted' | 'rejected') => {
-        if (!user) return;
-        try {
-            // 1. Update invite status
+    // 5. Respond to Invite Mutation
+    const respondToInviteMutation = useMutation({
+        mutationFn: async ({ inviteId, groupId, status }: { inviteId: string, groupId: string, status: 'accepted' | 'rejected' }) => {
+            if (!user) return;
             const { error: updateError } = await supabase
                 .from('group_invites')
                 .update({ status })
@@ -161,82 +129,68 @@ export function useGroups() {
 
             if (updateError) throw updateError;
 
-            // 2. If accepted, add to group_members
             if (status === 'accepted') {
                 const { error: memberError } = await supabase
                     .from('group_members')
-                    .insert({
-                        group_id: groupId,
-                        user_id: user.id,
-                        role: 'member'
-                    });
-
+                    .insert({ group_id: groupId, user_id: user.id, role: 'member' });
                 if (memberError) throw memberError;
             }
-
-            // Refresh lists
-            await fetchInvites();
-            await fetchGroups();
-        } catch (err) {
-            console.error('Error responding to invite:', err);
-            throw err;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['groups', user?.id] });
+            queryClient.invalidateQueries({ queryKey: ['group-invites', user?.id] });
         }
-    };
+    });
 
-    const updateGroup = async (groupId: string, updates: Partial<Group>) => {
-        if (!user) return null;
-        try {
-            const { data, error: updateError } = await supabase
+    // 6. Update Group Mutation
+    const updateGroupMutation = useMutation({
+        mutationFn: async ({ groupId, updates }: { groupId: string, updates: Partial<Group> }) => {
+            const { data, error } = await supabase
                 .from('groups')
                 .update(updates)
                 .eq('id', groupId)
                 .select()
                 .single();
-
-            if (updateError) throw updateError;
-            await fetchGroups();
+            if (error) throw error;
             return data;
-        } catch (err: any) {
-            console.error('Error updating group:', err);
-            throw err;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['groups', user?.id] });
         }
-    };
+    });
 
     const uploadGroupImage = async (file: File) => {
         if (!user) return null;
-        try {
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${Math.random()}.${fileExt}`;
-            const filePath = `group-covers/${fileName}`;
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `group-covers/${fileName}`;
 
-            const { error: uploadError } = await supabase.storage
-                .from('group-images')
-                .upload(filePath, file);
+        const { error: uploadError } = await supabase.storage
+            .from('group-images')
+            .upload(filePath, file);
 
-            if (uploadError) throw uploadError;
+        if (uploadError) throw uploadError;
 
-            const { data: { publicUrl } } = supabase.storage
-                .from('group-images')
-                .getPublicUrl(filePath);
+        const { data: { publicUrl } } = supabase.storage
+            .from('group-images')
+            .getPublicUrl(filePath);
 
-            return publicUrl;
-        } catch (err: any) {
-            console.error('Error uploading group image:', err);
-            throw err;
-        }
+        return publicUrl;
     };
 
     return {
         groups,
         invites,
-        loading,
-        error,
+        loading: loadingGroups || loadingInvites,
+        error: groupsError ? (groupsError as any).message : null,
         fetchGroups,
-        createGroup,
-        inviteMember,
+        createGroup: (name: string, description: string, isPrivate?: boolean) => createGroupMutation.mutateAsync({ name, description, isPrivate }),
+        inviteMember: (groupId: string, inviteeId: string) => inviteMemberMutation.mutateAsync({ groupId, inviteeId }),
         fetchInvites,
-        respondToInvite,
-        updateGroup,
-        uploadGroupImage
+        respondToInvite: (inviteId: string, groupId: string, status: 'accepted' | 'rejected') => respondToInviteMutation.mutateAsync({ inviteId, groupId, status }),
+        updateGroup: (groupId: string, updates: Partial<Group>) => updateGroupMutation.mutateAsync({ groupId, updates }),
+        uploadGroupImage,
+        isCreating: createGroupMutation.isPending,
+        isUpdating: updateGroupMutation.isPending
     };
 }

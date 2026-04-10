@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 
@@ -34,18 +35,21 @@ export interface Conversation {
     group?: any; // For group
 }
 
-export function useMessages() {
+export function useMessages(otherUserId?: string) {
     const { user } = useAuth();
-    const [conversations, setConversations] = useState<Conversation[]>([]);
-    const [messages, setMessages] = useState<Message[]>([]);
-    const [loading, setLoading] = useState(false);
+    const queryClient = useQueryClient();
 
-    // 1. Fetch Inbox (all unique conversations + groups)
-    const fetchConversations = useCallback(async () => {
-        if (!user) return;
-        setLoading(true);
-        try {
-            // A. FETCH INDIVIDUAL CONVERSATIONS
+    // 1. Fetch Inbox (Conversations)
+    const { 
+        data: conversations = [], 
+        isLoading: loadingConversations,
+        refetch: fetchConversations 
+    } = useQuery({
+        queryKey: ['conversations', user?.id],
+        queryFn: async () => {
+            if (!user) return [];
+
+            // A. Individual Conversations
             const { data: directMsgs, error: dmError } = await supabase
                 .from('messages')
                 .select(`
@@ -60,27 +64,24 @@ export function useMessages() {
 
             const dmGroups: Record<string, Conversation> = {};
             (directMsgs || []).forEach(msg => {
-                const otherUser = msg.sender_id === user.id ? msg.receiver : msg.sender;
-                if (!dmGroups[otherUser.id]) {
-                    dmGroups[otherUser.id] = {
+                const other = msg.sender_id === user.id ? msg.receiver : msg.sender;
+                if (!dmGroups[other.id]) {
+                    dmGroups[other.id] = {
                         type: 'individual',
-                        id: otherUser.id,
-                        user: otherUser,
+                        id: other.id,
+                        user: other,
                         lastMessage: msg,
                         unreadCount: (!msg.is_read && msg.receiver_id === user.id) ? 1 : 0
                     };
                 } else if (!msg.is_read && msg.receiver_id === user.id) {
-                    dmGroups[otherUser.id].unreadCount++;
+                    dmGroups[other.id].unreadCount++;
                 }
             });
 
-            // B. FETCH GROUPS AND THEIR LAST MESSAGES
+            // B. Group Conversations
             const { data: memberships, error: memberError } = await supabase
                 .from('group_members')
-                .select(`
-                    group_id,
-                    groups:group_id (*)
-                `)
+                .select('group_id, groups:group_id (*)')
                 .eq('user_id', user.id);
 
             if (memberError) throw memberError;
@@ -89,32 +90,25 @@ export function useMessages() {
             const groupList: Conversation[] = [];
 
             if (groupIds.length > 0) {
-                // Fetch ONLY the latest message for each group to avoid over-fetching
                 const { data: lastGroupMsgs, error: groupMsgError } = await supabase
                     .from('group_messages')
                     .select('*')
                     .in('group_id', groupIds)
                     .order('created_at', { ascending: false });
 
-                // Note: We still get all messages here to calculate unread counts precisely.
-                // In a massive app, we'd use a RPC/Stored procedure for this.
-
                 if (groupMsgError) throw groupMsgError;
 
-                // Fetch read status for groups
-                const { data: readStatus, error: readError } = await supabase
+                const { data: readStatus } = await supabase
                     .from('group_message_reads')
                     .select('*')
                     .eq('user_id', user.id);
 
-                if (readError) throw readError;
-
                 (memberships as any[] || []).forEach(m => {
-                    const group = m.groups as any;
+                    const group = m.groups;
                     if (!group) return;
 
-                    const lastMsg = (lastGroupMsgs || []).find(msg => msg.group_id === group.id);
-                    if (!lastMsg) return;
+                    const gLastMsg = (lastGroupMsgs || []).find(msg => msg.group_id === group.id);
+                    if (!gLastMsg) return;
 
                     const readRecord = (readStatus || []).find(rs => rs.group_id === group.id);
                     const unreadCount = (lastGroupMsgs || [])
@@ -128,17 +122,16 @@ export function useMessages() {
                         id: group.id,
                         group: group,
                         lastMessage: {
-                            content: lastMsg.content,
-                            created_at: lastMsg.created_at,
-                            sender_id: lastMsg.user_id
+                            content: gLastMsg.content,
+                            created_at: gLastMsg.created_at,
+                            sender_id: gLastMsg.user_id
                         },
                         unreadCount
                     });
                 });
             }
 
-            // C. MERGE AND SORT
-            const allConversations = [
+            return [
                 ...Object.values(dmGroups),
                 ...groupList
             ].sort((a, b) => {
@@ -146,85 +139,19 @@ export function useMessages() {
                 const dateB = new Date(b.lastMessage?.created_at || 0).getTime();
                 return dateB - dateA;
             });
+        },
+        enabled: !!user,
+    });
 
-            setConversations(allConversations);
-        } catch (err) {
-            console.error('Error fetching conversations:', err);
-        } finally {
-            setLoading(false);
-        }
-    }, [user]);
-
-    // 2. Real-time Inbox Subscription
-    useEffect(() => {
-        if (!user) return;
-
-        // Subscribe to direct messages
-        const dmChannel = supabase
-            .channel('inbox-dm')
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'messages',
-                    filter: `receiver_id=eq.${user.id}`
-                },
-                () => {
-                    console.log('useMessages: New DM received, refreshing inbox...');
-                    fetchConversations();
-                }
-            )
-            .subscribe();
-
-        // Subscribe to group messages (refreshes if any group message arrives)
-        const groupChannel = supabase
-            .channel('inbox-groups')
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'group_messages'
-                },
-                () => {
-                    // We could filter this more precisely, but refreshing for any group message 
-                    // is a safe way to ensure the last message in the list is current.
-                    console.log('useMessages: New Group message received, refreshing inbox...');
-                    fetchConversations();
-                }
-            )
-            .subscribe();
-
-        // Listen for message UPDATES (marking as read)
-        const updateChannel = supabase
-            .channel('inbox-updates')
-            .on(
-                'postgres_changes',
-                {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'messages'
-                },
-                () => {
-                    console.log('useMessages: Message updated (read status), refreshing inbox...');
-                    fetchConversations();
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(dmChannel);
-            supabase.removeChannel(groupChannel);
-            supabase.removeChannel(updateChannel);
-        };
-    }, [user, fetchConversations]);
-
-    // 3. Fetch Chat History (Individual)
-    const fetchMessages = useCallback(async (otherUserId: string) => {
-        if (!user || !otherUserId) return;
-        setLoading(true);
-        try {
+    // 2. Fetch Chat History (Individual)
+    const { 
+        data: messages = [], 
+        isLoading: loadingMessages,
+        refetch: fetchMessages 
+    } = useQuery({
+        queryKey: ['messages', user?.id, otherUserId],
+        queryFn: async () => {
+            if (!user || !otherUserId) return [];
             const { data, error } = await supabase
                 .from('messages')
                 .select(`
@@ -236,27 +163,28 @@ export function useMessages() {
                 .order('created_at', { ascending: true });
 
             if (error) throw error;
-            setMessages(data || []);
 
-            // Mark as read
-            await supabase
+            // Mark as read side effect
+            supabase
                 .from('messages')
                 .update({ is_read: true })
                 .eq('sender_id', otherUserId)
                 .eq('receiver_id', user.id)
-                .eq('is_read', false);
+                .eq('is_read', false)
+                .then(() => {
+                    // Update unread count in inbox cache
+                    queryClient.invalidateQueries({ queryKey: ['conversations', user.id] });
+                });
 
-        } catch (err) {
-            console.error('Error fetching messages:', err);
-        } finally {
-            setLoading(false);
-        }
-    }, [user]);
+            return data as Message[];
+        },
+        enabled: !!user && !!otherUserId,
+    });
 
-    // 3. Send Message
-    const sendMessage = async (receiverId: string, content: string) => {
-        if (!user || !content.trim()) return null;
-        try {
+    // 3. Send Message Mutation
+    const sendMessageMutation = useMutation({
+        mutationFn: async ({ receiverId, content }: { receiverId: string, content: string }) => {
+            if (!user || !content.trim()) return null;
             const { data, error } = await supabase
                 .from('messages')
                 .insert({
@@ -273,19 +201,44 @@ export function useMessages() {
 
             if (error) throw error;
             return data;
-        } catch (err) {
-            console.error('Error sending message:', err);
-            throw err;
+        },
+        onSuccess: (newMessage) => {
+            if (newMessage) {
+                queryClient.setQueryData(['messages', user?.id, otherUserId], (prev: any) => [...(prev || []), newMessage]);
+                queryClient.invalidateQueries({ queryKey: ['conversations', user?.id] });
+            }
         }
-    };
+    });
+
+    // 4. Real-time Subscriptions
+    useEffect(() => {
+        if (!user) return;
+
+        const channels = [
+            supabase.channel('inbox-dm').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, () => {
+                queryClient.invalidateQueries({ queryKey: ['conversations', user.id] });
+                if (otherUserId) queryClient.invalidateQueries({ queryKey: ['messages', user.id, otherUserId] });
+            }),
+            supabase.channel('inbox-groups').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'group_messages' }, () => {
+                queryClient.invalidateQueries({ queryKey: ['conversations', user.id] });
+            }),
+            supabase.channel('inbox-updates').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, () => {
+                queryClient.invalidateQueries({ queryKey: ['conversations', user.id] });
+            })
+        ];
+
+        channels.forEach(c => c.subscribe());
+        return () => { channels.forEach(c => supabase.removeChannel(c)); };
+    }, [user, otherUserId, queryClient]);
 
     return {
         conversations,
         messages,
-        loading,
+        loading: loadingConversations || loadingMessages,
         fetchConversations,
-        fetchMessages,
-        sendMessage,
-        setMessages
+        fetchMessages: (id: string) => fetchMessages(), // Compatible with old signature but uses query internal
+        sendMessage: (receiverId: string, content: string) => sendMessageMutation.mutateAsync({ receiverId, content }),
+        isSending: sendMessageMutation.isPending,
+        setMessages: (newMessages: any) => queryClient.setQueryData(['messages', user?.id, otherUserId], newMessages)
     };
 }

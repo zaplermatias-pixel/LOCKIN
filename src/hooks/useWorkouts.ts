@@ -131,6 +131,37 @@ export function useWorkouts(userId?: string) {
                 await supabase.from('group_messages').insert(groupNotifications);
             }
 
+            // 5. Actualizar streak y total_workouts
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+            const { count: workedOutYesterday } = await supabase
+                .from('workouts')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', user.id)
+                .eq('workout_date', yesterdayStr)
+                .eq('is_deleted', false);
+
+            // Obtener streak actual
+            const { data: currentProfile } = await supabase
+                .from('users')
+                .select('current_streak, total_workouts')
+                .eq('id', user.id)
+                .single();
+
+            const newStreak = (workedOutYesterday && workedOutYesterday > 0)
+                ? (currentProfile?.current_streak || 0) + 1
+                : 1;
+
+            await supabase
+                .from('users')
+                .update({
+                    current_streak: newStreak,
+                    total_workouts: (currentProfile?.total_workouts || 0) + 1
+                })
+                .eq('id', user.id);
+
             return workout;
         },
         onSuccess: () => {

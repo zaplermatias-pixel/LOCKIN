@@ -1,20 +1,18 @@
-import { useState, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { Group, GroupMember, WorkoutWithDetails } from '@/types/database.types';
 
 export function useGroupDetails(groupId: string) {
-    const [group, setGroup] = useState<Group | null>(null);
-    const [members, setMembers] = useState<(GroupMember & { users: { username: string; display_name: string | null; profile_picture_url: string | null } })[]>([]);
-    const [activity, setActivity] = useState<WorkoutWithDetails[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const { 
+        data, 
+        isLoading: loading, 
+        error: errorObj,
+        refetch: fetchDetails 
+    } = useQuery({
+        queryKey: ['group-details', groupId],
+        queryFn: async () => {
+            if (!groupId) return null;
 
-    const fetchDetails = useCallback(async () => {
-        if (!groupId) return;
-        setLoading(true);
-        setError(null);
-
-        try {
             // 1. Fetch group info
             const { data: groupData, error: groupError } = await supabase
                 .from('groups')
@@ -23,7 +21,6 @@ export function useGroupDetails(groupId: string) {
                 .single();
 
             if (groupError) throw groupError;
-            setGroup(groupData);
 
             // 2. Fetch members with user details
             const { data: memberData, error: memberError } = await supabase
@@ -41,10 +38,10 @@ export function useGroupDetails(groupId: string) {
                 .eq('group_id', groupId);
 
             if (memberError) throw memberError;
-            setMembers(memberData as any);
 
             // 3. Fetch group activity (workouts from these members)
             const userIds = memberData.map(m => m.user_id);
+            let activity: WorkoutWithDetails[] = [];
 
             if (userIds.length > 0) {
                 const today = new Date().toISOString().split('T')[0];
@@ -76,23 +73,24 @@ export function useGroupDetails(groupId: string) {
                     .limit(20);
 
                 if (workoutError) throw workoutError;
-                setActivity(workoutData as WorkoutWithDetails[]);
+                activity = workoutData as WorkoutWithDetails[];
             }
 
-        } catch (err: any) {
-            console.error('Error fetching group details:', err);
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    }, [groupId]);
+            return {
+                group: groupData as Group,
+                members: memberData as (GroupMember & { users: { username: string; display_name: string | null; profile_picture_url: string | null, current_streak: number, total_workouts: number } })[],
+                activity
+            };
+        },
+        enabled: !!groupId && groupId !== 'undefined',
+    });
 
     return {
-        group,
-        members,
-        activity,
+        group: data?.group ?? null,
+        members: data?.members ?? [],
+        activity: data?.activity ?? [],
         loading,
-        error,
+        error: errorObj ? (errorObj as any).message : null,
         fetchDetails
     };
 }

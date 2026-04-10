@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGroups } from '@/hooks/useGroups';
 import { Button } from '@/components/ui/button';
@@ -19,23 +19,18 @@ import {
 
 export function Groups() {
     const navigate = useNavigate();
-    const { groups, invites, loading, fetchGroups, createGroup, fetchInvites, respondToInvite } = useGroups();
+    const { groups, invites, loading, createGroup, respondToInvite, isCreating } = useGroups();
     const [isCreateOpen, setIsCreateOpen] = useState(false);
 
     // Form State
     const [newName, setNewName] = useState('');
     const [newDesc, setNewDesc] = useState('');
-    const [isCreating, setIsCreating] = useState(false);
 
-    useEffect(() => {
-        fetchGroups();
-        fetchInvites();
-    }, [fetchGroups, fetchInvites]);
+    // React Query maneja la carga automáticamente al montar el componente 🚀
 
     const handleCreate = async () => {
         if (!newName.trim()) return;
 
-        setIsCreating(true);
         try {
             await createGroup(newName, newDesc);
             setIsCreateOpen(false);
@@ -44,8 +39,6 @@ export function Groups() {
         } catch (error) {
             console.error('Error creating group:', error);
             alert('Error al crear el grupo. Inténtalo de nuevo.');
-        } finally {
-            setIsCreating(false);
         }
     };
 

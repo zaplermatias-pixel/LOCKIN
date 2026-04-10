@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useMessages, type Message } from '@/hooks/useMessages';
+import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/lib/supabase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,46 +11,19 @@ export function Chat() {
     const { userId: otherUserId } = useParams<{ userId: string }>();
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { messages, loading, fetchMessages, sendMessage, setMessages } = useMessages();
+    
+    // El hook ahora maneja el estado, la carga y el tiempo real internamente 🚀
+    const { 
+        messages, 
+        loading, 
+        sendMessage, 
+        isSending 
+    } = useMessages(otherUserId);
+
     const [newMessage, setNewMessage] = useState('');
-    const [isSending, setIsSending] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        if (otherUserId) {
-            fetchMessages(otherUserId);
-        }
-    }, [otherUserId, fetchMessages]);
-
-    // Real-time subscription
-    useEffect(() => {
-        if (!user || !otherUserId) return;
-
-        const channel = supabase
-            .channel(`chat:${user.id}:${otherUserId}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'messages',
-                    filter: `and(sender_id.eq.${otherUserId},receiver_id.eq.${user.id})`
-                },
-                (payload) => {
-                    const newMsg = payload.new as Message;
-                    setMessages(prev => [...prev, newMsg]);
-
-                    // Mark as read immediately if in chat
-                    supabase.from('messages').update({ is_read: true }).eq('id', newMsg.id);
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [user, otherUserId, setMessages]);
-
+    // Auto-scroll al final cuando hay mensajes nuevos
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -62,17 +34,11 @@ export function Chat() {
         e?.preventDefault();
         if (!newMessage.trim() || !otherUserId || isSending) return;
 
-        setIsSending(true);
         try {
-            const sent = await sendMessage(otherUserId, newMessage);
-            if (sent) {
-                setMessages(prev => [...prev, sent]);
-                setNewMessage('');
-            }
+            await sendMessage(otherUserId, newMessage);
+            setNewMessage('');
         } catch (error) {
             console.error('Failed to send message:', error);
-        } finally {
-            setIsSending(false);
         }
     };
 
@@ -104,10 +70,9 @@ export function Chat() {
                         <h2 className="font-black italic text-sm text-primary dark:text-beige uppercase tracking-tight truncate">
                             {otherUser?.display_name || otherUser?.username || 'Cargando...'}
                         </h2>
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
-                            <p className="text-[10px] font-black text-primary/30 dark:text-beige/30 uppercase tracking-widest">En línea</p>
-                        </div>
+                        <p className="text-[10px] font-black text-primary/30 dark:text-beige/30 uppercase tracking-widest">
+                            @{otherUser?.username || '...'}
+                        </p>
                     </div>
                 </div>
 
@@ -119,7 +84,7 @@ export function Chat() {
             {/* Messages Area */}
             <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50/50 dark:bg-dark-bg/50 transition-colors"
+                className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50/50 dark:bg-dark-bg/50 transition-colors no-scrollbar"
             >
                 {loading && messages.length === 0 ? (
                     <div className="flex justify-center py-20">
@@ -194,9 +159,3 @@ export function Chat() {
         </div>
     );
 }
-
-const MessageSquare = ({ className }: { className?: string }) => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-    </svg>
-);

@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/context/AuthContext';
@@ -10,11 +9,7 @@ import { Input } from '@/components/ui/input';
 export function Messages() {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { conversations, loading, fetchConversations } = useMessages();
-
-    useEffect(() => {
-        fetchConversations();
-    }, [fetchConversations]);
+    const { conversations, loading } = useMessages();
 
     return (
         <div className="max-w-md mx-auto pb-24 pt-4 px-4 min-h-screen">

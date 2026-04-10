@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 
@@ -17,14 +18,17 @@ export interface GroupMessage {
 
 export function useGroupMessages(groupId: string) {
     const { user } = useAuth();
-    const [messages, setMessages] = useState<GroupMessage[]>([]);
-    const [loading, setLoading] = useState(false);
+    const queryClient = useQueryClient();
 
-    // 1. Fetch History
-    const fetchMessages = useCallback(async () => {
-        if (!groupId) return;
-        setLoading(true);
-        try {
+    // 1. Fetch History Query
+    const { 
+        data: messages = [], 
+        isLoading: loading,
+        refetch: fetchMessages 
+    } = useQuery({
+        queryKey: ['group-messages', groupId],
+        queryFn: async () => {
+            if (!groupId) return [];
             const { data, error } = await supabase
                 .from('group_messages')
                 .select(`
@@ -35,25 +39,22 @@ export function useGroupMessages(groupId: string) {
                 .order('created_at', { ascending: true });
 
             if (error) throw error;
-            setMessages(data || []);
 
-            // Mark as read when fetching history
+            // Mark as read side effect
             if (data && data.length > 0) {
                 const lastMsg = data[data.length - 1];
-                markAsRead(lastMsg.id);
+                markAsReadMutation.mutate({ messageId: lastMsg.id });
             }
-        } catch (err) {
-            console.error('Error fetching group messages:', err);
-        } finally {
-            setLoading(false);
-        }
-    }, [groupId]);
 
-    // 2. Mark as Read
-    const markAsRead = useCallback(async (messageId?: string) => {
-        if (!user || !groupId) return;
+            return data as GroupMessage[];
+        },
+        enabled: !!groupId && groupId !== 'undefined',
+    });
 
-        try {
+    // 2. Mark as Read Mutation
+    const markAsReadMutation = useMutation({
+        mutationFn: async ({ messageId }: { messageId?: string }) => {
+            if (!user || !groupId) return;
             const { error } = await supabase
                 .from('group_message_reads')
                 .upsert({
@@ -64,17 +65,14 @@ export function useGroupMessages(groupId: string) {
                 }, {
                     onConflict: 'user_id,group_id'
                 });
-
             if (error) throw error;
-        } catch (err) {
-            console.error('Error marking group as read:', err);
         }
-    }, [user, groupId]);
+    });
 
-    // 3. Send Message
-    const sendGroupMessage = async (content: string) => {
-        if (!user || !content.trim() || !groupId) return null;
-        try {
+    // 3. Send Message Mutation
+    const sendGroupMessageMutation = useMutation({
+        mutationFn: async (content: string) => {
+            if (!user || !content.trim() || !groupId) return null;
             const { data, error } = await supabase
                 .from('group_messages')
                 .insert({
@@ -89,16 +87,15 @@ export function useGroupMessages(groupId: string) {
                 .single();
 
             if (error) throw error;
-
-            // Mark as read after sending
-            markAsRead(data.id);
-
             return data;
-        } catch (err) {
-            console.error('Error sending group message:', err);
-            throw err;
+        },
+        onSuccess: (newMessage) => {
+            if (newMessage) {
+                queryClient.setQueryData(['group-messages', groupId], (prev: any) => [...(prev || []), newMessage]);
+                markAsReadMutation.mutate({ messageId: newMessage.id });
+            }
         }
-    };
+    });
 
     // 4. Real-time Subscription
     useEffect(() => {
@@ -116,7 +113,6 @@ export function useGroupMessages(groupId: string) {
                 },
                 async (payload) => {
                     const newMsg = payload.new;
-
                     // Fetch user info for the new message
                     const { data: userData } = await supabase
                         .from('users')
@@ -129,9 +125,10 @@ export function useGroupMessages(groupId: string) {
                         user: userData
                     };
 
-                    setMessages(prev => {
-                        if (prev.some(m => m.id === completeMsg.id)) return prev;
-                        return [...prev, completeMsg];
+                    queryClient.setQueryData(['group-messages', groupId], (prev: any) => {
+                        const messages = prev || [];
+                        if (messages.some((m: any) => m.id === completeMsg.id)) return messages;
+                        return [...messages, completeMsg];
                     });
                 }
             )
@@ -140,14 +137,14 @@ export function useGroupMessages(groupId: string) {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [groupId, markAsRead]);
+    }, [groupId, queryClient]);
 
     return {
         messages,
         loading,
         fetchMessages,
-        sendGroupMessage,
-        setMessages,
-        markAsRead
+        sendGroupMessage: sendGroupMessageMutation.mutateAsync,
+        isSending: sendGroupMessageMutation.isPending,
+        markAsRead: (id?: string) => markAsReadMutation.mutate({ messageId: id })
     };
 }

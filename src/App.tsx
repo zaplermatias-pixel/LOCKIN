@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { Toaster } from 'sonner';
 import { Login } from '@/pages/Login';
 import { Register } from '@/pages/Register';
 import { ProtectedRoute, PublicRoute } from '@/components/auth/RouteGuards';
@@ -19,7 +20,9 @@ import { WorkoutDetail } from '@/pages/WorkoutDetail';
 
 export default function App() {
   return (
-    <Routes>
+    <>
+      <Toaster position="top-center" expand={false} richColors closeButton />
+      <Routes>
       {/* Rutas Públicas */}
       <Route element={<PublicRoute />}>
         <Route path="/" element={<Login />} />
@@ -46,5 +49,6 @@ export default function App() {
       {/* Redirección por defecto */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   );
 }

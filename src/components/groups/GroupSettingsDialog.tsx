@@ -11,7 +11,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Camera, Loader2, Save, X } from 'lucide-react';
+import { Camera, Loader2, Save } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 
 interface GroupSettingsDialogProps {

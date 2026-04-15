@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useFeed } from '@/hooks/useFeed';
@@ -16,10 +15,6 @@ import {
 export function Feed() {
     const navigate = useNavigate();
     const { workouts, loading, hasWorkedOutToday, error, refetch } = useFeed();
-
-    useEffect(() => {
-        refetch();
-    }, [refetch]); // Se ejecuta cuando 'refetch' cambia (lo cual pasa cuando 'user' ya está disponible)
 
     if (loading && workouts.length === 0) {
         return (
@@ -43,7 +38,7 @@ export function Feed() {
                 <AlertCircle className="h-10 w-10 text-red-500 mb-4" />
                 <h3 className="text-lg font-bold text-red-900 mb-2">Vaya, algo salió mal</h3>
                 <p className="text-red-700 text-sm mb-6 max-w-xs">{error}</p>
-                <Button onClick={refetch} variant="outline" className="gap-2 border-red-200 text-red-700 hover:bg-red-100">
+                <Button onClick={() => refetch()} variant="outline" className="gap-2 border-red-200 text-red-700 hover:bg-red-100">
                     <RefreshCcw className="h-4 w-4" /> Reintentar
                 </Button>
             </div>
@@ -94,7 +89,7 @@ export function Feed() {
                     </div>
                     <Button
                         variant="ghost"
-                        onClick={refetch}
+                        onClick={() => refetch()}
                         className="text-primary dark:text-beige hover:bg-primary/5 dark:hover:bg-white/5 font-black text-[10px] uppercase tracking-widest p-0 h-10 w-10 rounded-2xl"
                     >
                         <RefreshCcw className="h-5 w-5" />

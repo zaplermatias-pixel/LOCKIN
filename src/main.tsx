@@ -27,7 +27,7 @@ const queryClient = new QueryClient({
   },
 })
 
-function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
+function ErrorFallback({ error, resetErrorBoundary }: { error: any; resetErrorBoundary: () => void }) {
   return (
     <div role="alert" className="p-4 bg-red-50 text-red-900 h-screen flex flex-col items-center justify-center">
       <h2 className="text-2xl font-bold mb-2">Algo salió mal 😭</h2>

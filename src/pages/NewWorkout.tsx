@@ -10,8 +10,6 @@ import {
     Music,
     X,
     Check,
-    Type,
-    ChevronDown,
     AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';

@@ -78,7 +78,7 @@ export function Calendar({ workouts, onSelectDate }: CalendarProps) {
             </div>
 
             <div className="grid grid-cols-7 gap-1">
-                {days.map((day, dayIdx) => {
+                {days.map((day) => {
                     const dayWorkouts = getWorkoutsForDay(day);
                     const hasWorkout = dayWorkouts.length > 0;
                     const isSelected = selectedDate && isSameDay(day, selectedDate);

@@ -13,6 +13,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
         autoRefreshToken: true,
         detectSessionInUrl: true,
         // Bypass navigator.locks with correct signature: (name, timeout, fn)
-        lock: (name, timeout, fn) => fn()
+        lock: (_name, _timeout, fn) => fn()
     }
 })

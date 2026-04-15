@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { Workout } from '@/types/database.types';
 import { useAuth } from '@/context/AuthContext';
+import { toast } from 'sonner';
 
 export function useWorkouts(userId?: string) {
     const { user } = useAuth();
@@ -166,21 +167,32 @@ export function useWorkouts(userId?: string) {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['workouts'] });
-            queryClient.invalidateQueries({ queryKey: ['profile'] }); // Actualizar contadores
+            queryClient.invalidateQueries({ queryKey: ['feed'] });
+            queryClient.invalidateQueries({ queryKey: ['profile'] });
+            toast.success('¡LockIn completado! 🔥 Hecho es mejor que perfecto.');
+        },
+        onError: (err: any) => {
+            toast.error('Error al publicar: ' + (err.message || 'Inténtalo de nuevo'));
         }
     });
 
-    const refetch = useCallback(() => {
-        return queryClient.invalidateQueries({ queryKey: ['workouts', targetUserId] });
-    }, [queryClient, targetUserId]);
+    const deleteWorkout = useCallback(async (workoutId: string) => {
+        const { error } = await supabase
+            .from('workouts')
+            .update({ is_deleted: true })
+            .eq('id', workoutId);
+        
+        if (error) throw error;
+        queryClient.invalidateQueries({ queryKey: ['workouts'] });
+    }, [queryClient]);
 
     return {
-        workouts: workouts ?? [],
+        workouts,
         loading,
         error,
-        refetch,
         createWorkout: createWorkoutMutation.mutateAsync,
-        checkHasWorkedOutToday,
-        isCreating: createWorkoutMutation.isPending
+        isCreating: createWorkoutMutation.isPending,
+        deleteWorkout,
+        checkHasWorkedOutToday
     };
 }

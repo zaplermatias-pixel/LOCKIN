@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import type { Group } from '@/types/database.types';
+import { toast } from 'sonner';
 
 export function useGroups() {
     const { user } = useAuth();
@@ -81,6 +82,10 @@ export function useGroups() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['groups', user?.id] });
+            toast.success('¡Lock-In creado! 🦍');
+        },
+        onError: (err: any) => {
+            toast.error('Error al crear grupo: ' + err.message);
         }
     });
 
@@ -115,6 +120,12 @@ export function useGroups() {
                 console.error('Error sending notification:', err);
             }
             return data;
+        },
+        onSuccess: () => {
+            toast.success('Invitación enviada');
+        },
+        onError: (err: any) => {
+            toast.error('Error al invitar: ' + err.message);
         }
     });
 
@@ -136,9 +147,13 @@ export function useGroups() {
                 if (memberError) throw memberError;
             }
         },
-        onSuccess: () => {
+        onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: ['groups', user?.id] });
             queryClient.invalidateQueries({ queryKey: ['group-invites', user?.id] });
+            toast.success(variables.status === 'accepted' ? '¡Te has unido al Lock-In!' : 'Invitación rechazada');
+        },
+        onError: (err: any) => {
+            toast.error('Error: ' + err.message);
         }
     });
 
@@ -156,6 +171,7 @@ export function useGroups() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['groups', user?.id] });
+            toast.success('Ajustes del grupo actualizados');
         }
     });
 

@@ -9,7 +9,9 @@ import {
     Dumbbell,
     Users as UsersIcon,
     X,
-    MessageSquare
+    MessageSquare,
+    Lock,
+    Clock
 } from 'lucide-react';
 import { Calendar as WorkoutCalendar } from '@/components/calendar/Calendar';
 import { Button } from '@/components/ui/button';
@@ -20,12 +22,13 @@ import { Spinner } from '@/components/ui/spinner';
 import { StreakBadge } from '@/components/ui/StreakBadge';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 export function Profile() {
     const { id } = useParams<{ id: string }>();
     const { user: currentUser } = useAuth();
     const { profile, loading: profileLoading, error, refetch } = useProfile(id);
-    const { followersCount, followingCount } = useFriendships(id);
+    const { followersCount, followingCount, status } = useFriendships(id);
     const navigate = useNavigate();
 
     const { workouts, loading: workoutsLoading } = useWorkouts(id);
@@ -57,7 +60,7 @@ export function Profile() {
     }
 
     const stats = [
-        { label: 'Workouts', value: profile.total_workouts || workouts.length || 0, icon: Dumbbell },
+        { label: 'Workouts', value: profile.total_workouts || (workouts?.length || 0), icon: Dumbbell },
         { label: 'Seguidores', value: followersCount, icon: UsersIcon },
         { label: 'Siguiendo', value: followingCount, icon: UsersIcon },
     ];
@@ -121,34 +124,63 @@ export function Profile() {
                 </CardContent>
             </Card>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-3 gap-4">
-                {stats.map((stat) => (
-                    <Card key={stat.label} className="border-2 border-sand/80 dark:border-white/20 shadow-lg bg-white dark:bg-dark-surface transition-all">
-                        <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-                            <stat.icon className="h-5 w-5 text-primary dark:text-beige mb-1 opacity-80" />
-                            <span className="text-xl font-black italic uppercase text-primary dark:text-beige">{stat.value}</span>
-                            <span className="text-[9px] uppercase font-bold text-primary/30 dark:text-beige/30 tracking-widest">
-                                {stat.label}
-                            </span>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
-
-            {/* Calendar Section */}
-            <div className="space-y-4">
-                <h2 className="text-xl font-black italic uppercase tracking-tighter text-primary dark:text-beige px-1 flex items-center gap-2">
-                    <CalendarIcon className="h-5 w-5" />
-                    Historial de Actividad
-                </h2>
-
-                {workoutsLoading ? (
-                    <div className="h-64 bg-sand/20 dark:bg-dark-surface/50 rounded-3xl flex items-center justify-center border border-sand/30 dark:border-white/5">
-                        <Spinner />
+            {/* Stats Grid & Activity - Blurred if not following/accepted */}
+            <div className="relative group">
+                <div className={cn(
+                    "space-y-6 transition-all duration-700",
+                    !isOwnProfile && status !== 'accepted' && "blur-md select-none pointer-events-none opacity-40 grayscale"
+                )}>
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-3 gap-4">
+                        {stats.map((stat) => (
+                            <Card key={stat.label} className="border-2 border-sand/80 dark:border-white/20 shadow-lg bg-white dark:bg-dark-surface transition-all">
+                                <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                                    <stat.icon className="h-5 w-5 text-primary dark:text-beige mb-1 opacity-80" />
+                                    <span className="text-xl font-black italic uppercase text-primary dark:text-beige">{stat.value}</span>
+                                    <span className="text-[9px] uppercase font-bold text-primary/30 dark:text-beige/30 tracking-widest">
+                                        {stat.label}
+                                    </span>
+                                </CardContent>
+                            </Card>
+                        ))}
                     </div>
-                ) : (
-                    <WorkoutCalendar workouts={workouts} />
+
+                    {/* Calendar Section */}
+                    <div className="space-y-4">
+                        <h2 className="text-xl font-black italic uppercase tracking-tighter text-primary dark:text-beige px-1 flex items-center gap-2">
+                            <CalendarIcon className="h-5 w-5" />
+                            Historial de Actividad
+                        </h2>
+
+                        {workoutsLoading ? (
+                            <div className="h-64 bg-sand/20 dark:bg-dark-surface/50 rounded-3xl flex items-center justify-center border border-sand/30 dark:border-white/5">
+                                <Spinner />
+                            </div>
+                        ) : (
+                            <WorkoutCalendar workouts={workouts || []} />
+                        )}
+                    </div>
+                </div>
+
+                {/* Privacy Overlay */}
+                {!isOwnProfile && status !== 'accepted' && (
+                    <div className="absolute inset-x-0 top-0 bottom-0 z-10 flex flex-col items-center justify-center text-center p-8 bg-white/5 dark:bg-black/5 backdrop-blur-[2px] rounded-[3rem]">
+                        <div className="p-4 bg-white dark:bg-dark-surface rounded-full shadow-2xl mb-6 border border-primary/10 dark:border-white/10">
+                            {status === 'pending' ? (
+                                <Clock className="h-10 w-10 text-primary/40 dark:text-beige/40 animate-pulse" />
+                            ) : (
+                                <Lock className="h-10 w-10 text-primary/40 dark:text-beige/40" />
+                            )}
+                        </div>
+                        <h3 className="text-xl font-black uppercase italic tracking-tighter text-black dark:text-beige mb-2">
+                            {status === 'pending' ? 'Solicitud Enviada' : 'Perfil Privado'}
+                        </h3>
+                        <p className="text-xs font-bold text-primary/40 dark:text-beige/40 uppercase tracking-widest max-w-[240px] leading-relaxed">
+                            {status === 'pending' 
+                                ? 'Espera a que acepte tu solicitud para ver su progreso.' 
+                                : 'Sigue a este usuario para ver sus estadísticas y entrenamientos.'}
+                        </p>
+                    </div>
                 )}
             </div>
         </div>

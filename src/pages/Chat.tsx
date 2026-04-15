@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ChevronLeft, Send, MoreVertical, Loader2 } from 'lucide-react';
+import { ChevronLeft, Send, MoreVertical, Loader2, MessageSquare } from 'lucide-react';
 
 export function Chat() {
     const { userId: otherUserId } = useParams<{ userId: string }>();

@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useGroupDetails } from '@/hooks/useGroupDetails';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import { ChevronLeft, Users, Info, Trophy, Settings, Crown, UserPlus, MessageSquare, Send, Loader2, Award } from 'lucide-react';
+import { ChevronLeft, Users, Info, Trophy, Settings, Crown, UserPlus, MessageSquare, Send, Loader2, Award, Star } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { WorkoutCard } from '@/components/workouts/WorkoutCard';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -13,6 +13,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useGroupMessages } from '@/hooks/useGroupMessages';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/supabase';
+import { useGroupLeaderboard, type LeaderboardPeriod } from '@/hooks/useGroupLeaderboard';
+import { RankingPodium } from '@/components/groups/RankingPodium';
 
 export function GroupDetails() {
     const { user } = useAuth();
@@ -45,7 +47,10 @@ export function GroupDetails() {
     const [isLeaving, setIsLeaving] = useState(false);
     const [groupMessage, setGroupMessage] = useState('');
     const [activeTab, setActiveTab] = useState(initialTab);
+    const [leaderboardPeriod, setLeaderboardPeriod] = useState<LeaderboardPeriod>('weekly');
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    const { data: leaderboard, isLoading: leaderboardLoading } = useGroupLeaderboard(groupId!, leaderboardPeriod);
 
     const isAdmin = members.find(m => m.user_id === user?.id)?.role === 'admin';
 
@@ -355,52 +360,83 @@ export function GroupDetails() {
 
                     {/* LEADERBOARD TAB */}
                     <TabsContent value="leaderboard" className="space-y-4 outline-none">
-                        <div className="bg-white/80 dark:bg-dark-surface/80 backdrop-blur-md rounded-[3rem] p-6 shadow-xl border border-gray-100 dark:border-white/10 transition-colors overflow-hidden">
-                            <div className="flex items-center justify-between mb-8 px-2">
-                                <h4 className="text-xs font-black uppercase tracking-[0.2em] text-primary/40 dark:text-beige/40">Ranking de Competencia</h4>
+                        <div className="bg-white/80 dark:bg-dark-surface/80 backdrop-blur-xl rounded-[3rem] p-6 shadow-2xl border border-gray-100 dark:border-white/10 transition-colors overflow-hidden relative">
+                            <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-4 px-2">
+                                <div>
+                                    <h4 className="text-xs font-black uppercase tracking-[0.2em] text-primary/40 dark:text-beige/40">Ranking de Competencia</h4>
+                                    <p className="text-[10px] font-bold text-primary/20 dark:text-beige/20 uppercase tracking-widest mt-1">Días entrenados según periodo</p>
+                                </div>
+                                <div className="flex p-1 bg-gray-100 dark:bg-dark-card rounded-2xl border border-gray-200 dark:border-white/5">
+                                    {(['weekly', 'monthly', 'all'] as const).map((p) => (
+                                        <button
+                                            key={p}
+                                            onClick={() => setLeaderboardPeriod(p)}
+                                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                                leaderboardPeriod === p 
+                                                    ? 'bg-white dark:bg-beige text-primary dark:text-dark-bg shadow-sm' 
+                                                    : 'text-primary/40 dark:text-beige/40 hover:text-primary dark:hover:text-beige'
+                                            }`}
+                                        >
+                                            {p === 'weekly' ? 'S7' : p === 'monthly' ? 'S30' : 'Global'}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                            <div className="space-y-3">
-                                {[...members].sort((a: any, b: any) => (b.users?.current_streak || 0) - (a.users?.current_streak || 0)).map((member: any, index: number) => (
-                                    <div
-                                        key={member.id}
-                                        onClick={() => navigate(`/profile/${member.user_id}`)}
-                                        className="flex items-center justify-between p-4 rounded-2xl bg-gray-50/50 dark:bg-dark-card/30 hover:bg-primary/5 dark:hover:bg-beige/5 transition-all cursor-pointer group border border-transparent hover:border-primary/10 dark:hover:border-beige/10"
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className="text-xl font-black italic text-primary/40 dark:text-beige/40 w-6 text-center">
-                                                {index + 1}
-                                            </div>
-                                            <Avatar className="h-12 w-12 border-2 border-white dark:border-dark-surface shadow-md ring-2 ring-primary/5 dark:ring-beige/5">
-                                                <AvatarImage src={member.users?.profile_picture_url || ''} />
-                                                <AvatarFallback className="bg-primary/10 dark:bg-beige/10 text-primary dark:text-beige font-black italic text-xs">
-                                                    {member.users?.username?.[0]?.toUpperCase()}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <div>
-                                                <div className="flex items-center gap-2">
-                                                    <p className="font-black text-sm text-primary dark:text-beige uppercase italic tracking-tight truncate max-w-[120px]">
-                                                        {member.users?.display_name || member.users?.username}
-                                                    </p>
-                                                    {index === 0 && member.users?.current_streak > 0 && (
-                                                        <Crown className="h-3 w-3 text-yellow-500 fill-yellow-500/20" />
-                                                    )}
+
+                            {leaderboardLoading ? (
+                                <div className="flex justify-center py-20">
+                                    <Loader2 className="h-8 w-8 text-primary animate-spin opacity-20" />
+                                </div>
+                            ) : leaderboard && leaderboard.length > 0 ? (
+                                <div className="space-y-8">
+                                    {/* TOP 3 PODIUM */}
+                                    <RankingPodium entries={leaderboard} />
+
+                                    {/* REST OF THE LIST */}
+                                    {leaderboard.length > 3 && (
+                                        <div className="space-y-3 pt-4 border-t border-gray-100 dark:border-white/5 mx-2">
+                                            {leaderboard.slice(3).map((entry, index) => (
+                                                <div
+                                                    key={entry.user_id}
+                                                    onClick={() => navigate(`/profile/${entry.user_id}`)}
+                                                    className="flex items-center justify-between p-4 rounded-2xl bg-gray-50/50 dark:bg-dark-card/30 hover:bg-primary/5 dark:hover:bg-beige/5 transition-all cursor-pointer group border border-transparent hover:border-primary/10 dark:hover:border-beige/10"
+                                                >
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="text-xs font-black italic text-primary/30 dark:text-beige/30 w-6 text-center">
+                                                            {index + 4}
+                                                        </div>
+                                                        <Avatar className="h-10 w-10 border border-white dark:border-dark-surface shadow-md">
+                                                            <AvatarImage src={entry.profile_picture_url || ''} />
+                                                            <AvatarFallback className="bg-primary/5 dark:bg-beige/5 text-primary dark:text-beige text-xs font-black italic">
+                                                                {entry.username?.[0]?.toUpperCase()}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <div>
+                                                            <p className="font-black text-xs text-primary dark:text-beige uppercase italic tracking-tight truncate max-w-[120px]">
+                                                                {entry.display_name}
+                                                            </p>
+                                                            <p className="text-[9px] text-primary/30 dark:text-beige/30 font-bold uppercase tracking-widest leading-none">
+                                                                @{entry.username}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-dark-surface rounded-xl border border-gray-100 dark:border-white/5 shadow-sm">
+                                                        <Star className="h-3 w-3 text-primary/20 dark:text-beige/20" />
+                                                        <span className="text-[10px] font-black italic text-primary dark:text-beige">
+                                                            {entry.points} pts
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                                <p className="text-[10px] text-primary/40 dark:text-beige/40 font-bold uppercase tracking-widest">
-                                                    @{member.users?.username}
-                                                </p>
-                                            </div>
+                                            ))}
                                         </div>
-                                        <div className="flex flex-col items-end gap-1">
-                                            <div className="text-sm font-black italic text-primary dark:text-beige">
-                                                🔥 {member.users?.current_streak || 0}
-                                            </div>
-                                            <div className="text-[8px] font-black uppercase tracking-widest opacity-40">
-                                                Días Seguidos
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="text-center py-20 opacity-20">
+                                    <Trophy className="h-16 w-16 mx-auto mb-4" />
+                                    <p className="font-black uppercase italic tracking-widest text-sm">Nadie ha puntuado todavía</p>
+                                </div>
+                            )}
                         </div>
                     </TabsContent>
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
@@ -176,7 +176,9 @@ export function useMessages(otherUserId?: string) {
                     queryClient.invalidateQueries({ queryKey: ['conversations', user.id] });
                 });
 
-            return data as Message[];
+            return data.map((msg: any) => ({
+                ...msg
+            })) as Message[];
         },
         enabled: !!user && !!otherUserId,
     });
@@ -236,7 +238,7 @@ export function useMessages(otherUserId?: string) {
         messages,
         loading: loadingConversations || loadingMessages,
         fetchConversations,
-        fetchMessages: (id: string) => fetchMessages(), // Compatible with old signature but uses query internal
+        fetchMessages: (_id: string) => fetchMessages(), // Compatible with old signature but uses query internal
         sendMessage: (receiverId: string, content: string) => sendMessageMutation.mutateAsync({ receiverId, content }),
         isSending: sendMessageMutation.isPending,
         setMessages: (newMessages: any) => queryClient.setQueryData(['messages', user?.id, otherUserId], newMessages)

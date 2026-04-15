@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Bell, Calendar, MessageSquare, UserPlus } from 'lucide-react';
-import { useNotifications, type Notification } from '@/hooks/useNotifications';
+import { Bell, Calendar, MessageSquare, UserPlus, Check, X } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { useNotifications, type Notification as AppNotification } from '@/hooks/useNotifications';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
     Popover,
@@ -10,7 +12,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
 export function NotificationBell() {
@@ -24,7 +25,13 @@ export function NotificationBell() {
         }
     }, [open, fetchNotifications]);
 
-    const handleNotificationClick = (notification: Notification) => {
+    const handleNotificationClick = (notification: AppNotification) => {
+        if (notification.type === 'follow' && notification.message?.includes('quiere seguirte')) {
+            // No cerramos el popover inmediatamente para dejar que el usuario decida si aceptar o no
+            markAsRead(notification.id);
+            return;
+        }
+
         markAsRead(notification.id);
         setOpen(false);
 
@@ -42,6 +49,47 @@ export function NotificationBell() {
             case 'invite':
                 navigate('/groups');
                 break;
+        }
+    };
+
+    const handleAcceptFollow = async (e: React.MouseEvent, notification: AppNotification) => {
+        e.stopPropagation();
+        try {
+            const { error: friendshipError } = await supabase
+                .from('friendships')
+                .update({ status: 'accepted' })
+                .eq('follower_id', notification.actor_id)
+                .eq('followed_id', notification.user_id);
+
+            if (friendshipError) throw friendshipError;
+
+            // Mark as read and maybe update message
+            await supabase.from('notifications').update({ 
+                is_read: true,
+                message: 'ahora te sigue' 
+            }).eq('id', notification.id);
+            
+            fetchNotifications();
+        } catch (err) {
+            console.error('Error accepting follow:', err);
+        }
+    };
+
+    const handleDeclineFollow = async (e: React.MouseEvent, notification: AppNotification) => {
+        e.stopPropagation();
+        try {
+            const { error: friendshipError } = await supabase
+                .from('friendships')
+                .delete()
+                .eq('follower_id', notification.actor_id)
+                .eq('followed_id', notification.user_id);
+
+            if (friendshipError) throw friendshipError;
+
+            await markAsRead(notification.id);
+            fetchNotifications();
+        } catch (err) {
+            console.error('Error declining follow:', err);
         }
     };
 
@@ -105,13 +153,36 @@ export function NotificationBell() {
                                         </div>
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-xs font-bold text-gray-900 leading-tight">
-                                            <span className="font-black italic uppercase tracking-tighter text-primary">@{n.actor?.username}</span>
+                                        <p className="text-xs font-bold text-gray-900 dark:text-beige leading-tight">
+                                            <span className="font-black italic uppercase tracking-tighter text-primary dark:text-beige">@{n.actor?.username}</span>
                                             {" "}{n.message || "realizó una acción"}
                                         </p>
-                                        <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">
+                                        <p className="text-[10px] text-gray-400 dark:text-beige/40 font-bold uppercase mt-1">
                                             {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: es })}
                                         </p>
+
+                                        {/* ACCIONES DE SOLICITUD */}
+                                        {n.type === 'follow' && n.message?.includes('quiere seguirte') && (
+                                            <div className="flex items-center gap-2 mt-3">
+                                                <Button
+                                                    size="sm"
+                                                    onClick={(e) => handleAcceptFollow(e, n)}
+                                                    className="h-8 flex-1 bg-primary dark:bg-beige text-white dark:text-dark-bg rounded-xl font-black uppercase italic text-[9px] tracking-widest"
+                                                >
+                                                    <Check className="h-3 w-3 mr-1" />
+                                                    Aceptar
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={(e) => handleDeclineFollow(e, n)}
+                                                    className="h-8 flex-1 border-sand/30 dark:border-white/10 text-primary/40 dark:text-beige/40 font-black uppercase italic text-[9px] tracking-widest hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 rounded-xl"
+                                                >
+                                                    <X className="h-3 w-3 mr-1" />
+                                                    Rechazar
+                                                </Button>
+                                            </div>
+                                        )}
                                     </div>
                                     {!n.is_read && (
                                         <div className="w-2 h-2 rounded-full bg-accent mt-2 shrink-0" />

@@ -1,22 +1,15 @@
-import { useState, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
-import type { WorkoutWithDetails } from '@/types/database.types';
 
 export function useFeed() {
     const { user } = useAuth();
-    const [workouts, setWorkouts] = useState<WorkoutWithDetails[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [hasWorkedOutToday, setHasWorkedOutToday] = useState(false);
-    const [error, setError] = useState<string | null>(null);
 
-    const fetchFeed = useCallback(async () => {
-        if (!user) return;
+    const { data, isLoading: loading, error, refetch } = useQuery({
+        queryKey: ['feed', user?.id],
+        queryFn: async () => {
+            if (!user) return { workouts: [], hasWorkedOutToday: false };
 
-        setLoading(true);
-        setError(null);
-
-        try {
             const today = new Date().toISOString().split('T')[0];
 
             // 1. Verificar si el usuario ya entrenó hoy
@@ -28,8 +21,7 @@ export function useFeed() {
                 .eq('is_deleted', false)
                 .maybeSingle();
 
-            const finishedToday = !!todayWorkout;
-            setHasWorkedOutToday(finishedToday);
+            const hasWorkedOutToday = !!todayWorkout;
 
             // 2. Obtener IDs de personas que el usuario sigue
             const { data: following } = await supabase
@@ -38,14 +30,13 @@ export function useFeed() {
                 .eq('follower_id', user.id)
                 .eq('status', 'accepted');
 
-            // Incluir al propio usuario + amigos
             const friendIds = [
                 user.id,
                 ...(following?.map(f => f.followed_id) ?? [])
             ];
 
             // 3. Obtener entrenamientos de hoy solo de esos usuarios
-            const { data, error: fetchError } = await supabase
+            const { data: workoutData, error: fetchError } = await supabase
                 .from('workouts')
                 .select(`
                     *,
@@ -70,20 +61,20 @@ export function useFeed() {
 
             if (fetchError) throw fetchError;
 
-            setWorkouts(data as any[]);
-        } catch (err: any) {
-            console.error('Error fetching feed:', err);
-            setError(err.message || 'Error al cargar el feed');
-        } finally {
-            setLoading(false);
-        }
-    }, [user]);
+            return {
+                workouts: (workoutData as any[]) || [],
+                hasWorkedOutToday
+            };
+        },
+        enabled: !!user,
+        staleTime: 1000 * 60 * 2, // 2 minutos
+    });
 
     return {
-        workouts,
+        workouts: data?.workouts ?? [],
+        hasWorkedOutToday: data?.hasWorkedOutToday ?? false,
         loading,
-        hasWorkedOutToday,
-        error,
-        refetch: fetchFeed
+        error: error ? (error as any).message : null,
+        refetch
     };
 }

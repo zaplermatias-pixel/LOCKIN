@@ -19,6 +19,7 @@
         @apply bg-earth-bg text-[#2D3A18] antialiased transition-colors duration-300;
         font-feature-settings: "ss01", "ss02", "cv01", "cv02";
         height: 100dvh;
+        overscroll-behavior-y: contain;
     }
 
     .dark body {

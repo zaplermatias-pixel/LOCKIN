@@ -48,7 +48,7 @@ export function Messages() {
                             className="group flex items-center gap-4 p-4 rounded-[2rem] bg-white/60 dark:bg-dark-card/40 hover:bg-white dark:hover:bg-dark-card transition-all cursor-pointer border border-white/40 dark:border-white/10 active:scale-[0.98] shadow-sm hover:shadow-md mb-3"
                         >
                             <div className="relative">
-                                <Avatar className="h-14 w-14 border-2 border-white dark:border-dark-surface shadow-md ring-2 ring-primary/5 dark:ring-beige/5">
+                                <Avatar className="h-14 w-14 border-2 border-white dark:border-dark-surface shadow-md ring-2 ring-primary/5 dark:ring-beige/5 shrink-0">
                                     {conv.type === 'group' ? (
                                         <>
                                             <AvatarImage src={conv.group?.image_url || ''} />
@@ -91,7 +91,7 @@ export function Messages() {
                                 </p>
                             </div>
 
-                            <ChevronRight className="h-4 w-4 text-gray-200 group-hover:text-primary/40 group-hover:translate-x-1 transition-all" />
+                            <ChevronRight className="h-4 w-4 text-gray-200 group-hover:text-primary/40 group-hover:translate-x-1 transition-transform shrink-0 ml-2" />
                         </div>
                     ))
                 ) : (

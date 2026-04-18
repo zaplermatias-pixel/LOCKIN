@@ -93,6 +93,10 @@ export function NewWorkout() {
 
         const newPreviews = files.map(file => URL.createObjectURL(file));
         setPreviews(prev => [...prev, ...newPreviews]);
+        
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            navigator.vibrate(50);
+        }
     };
 
     const removeMedia = (index: number) => {
@@ -130,6 +134,10 @@ export function NewWorkout() {
                 origin: { y: 0.6 },
                 colors: ['#000000', '#dcdac0', '#ffffff', '#4ade80']
             });
+
+            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                navigator.vibrate([100, 50, 100]); // Patrón de éxito
+            }
 
             setJustCompleted(true);
             setHasWorkedOut(true);

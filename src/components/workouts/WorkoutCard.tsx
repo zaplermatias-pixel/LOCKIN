@@ -108,6 +108,7 @@ export function WorkoutCard({ workout, isLocked }: WorkoutCardProps) {
                                 <img
                                     src={media.media_url}
                                     alt={`Workout ${idx + 1}`}
+                                    loading="lazy"
                                     onClick={() => !isLocked && navigate(`/workout/${workout.id}`)}
                                     className={`w-full h-full object-cover transition-transform duration-700 ${!isLocked ? 'cursor-pointer' : ''}`}
                                 />
@@ -181,7 +182,12 @@ export function WorkoutCard({ workout, isLocked }: WorkoutCardProps) {
                     variant="ghost"
                     size="sm"
                     disabled={isLocked}
-                    onClick={toggleMotivate}
+                    onClick={() => {
+                        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                            navigator.vibrate(50);
+                        }
+                        toggleMotivate();
+                    }}
                     className={`rounded-2xl gap-2 px-6 h-12 transition-all font-black uppercase italic tracking-tighter flex-1 shadow-sm ${
                         hasMotivated
                             ? 'bg-primary text-white dark:bg-beige dark:text-dark-bg shadow-lg shadow-primary/20'

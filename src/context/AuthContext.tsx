@@ -7,6 +7,7 @@ interface AuthContextType {
     user: User | null;
     session: Session | null;
     loading: boolean;
+    authError: string | null;
     signUp: (email: string, password: string, username: string, displayName: string) => Promise<void>;
     signIn: (email: string, password: string) => Promise<void>;
     signOut: () => Promise<void>;
@@ -16,23 +17,60 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<User | null>(null);
+    const [user, setUser] = useState<User | null>(() => {
+        const cached = localStorage.getItem('lockin_cached_profile');
+        try { return cached ? JSON.parse(cached) : null; } catch { return null; }
+    });
     const [session, setSession] = useState<Session | null>(null);
     const [loading, setLoading] = useState(true);
+    const [authError, setAuthError] = useState<string | null>(null);
+
+    // Persist user profile to local storage for PWA quick hydrate
+    useEffect(() => {
+        if (user) {
+            localStorage.setItem('lockin_cached_profile', JSON.stringify(user));
+        }
+    }, [user]);
 
     useEffect(() => {
         let mounted = true;
+
+        const checkInitialSession = async () => {
+            try {
+                const { data: { session }, error } = await supabase.auth.getSession();
+                if (error) throw error;
+                if (!mounted) return;
+                
+                if (session) {
+                    setSession(session);
+                    if (session.user) {
+                        await fetchUserProfile(session.user.id);
+                    }
+                }
+            } catch (err) {
+                console.error('AuthContext: [ERROR] Initial getSession failed', err);
+                if (mounted) {
+                    setAuthError("No se pudo conectar. Reintentar.");
+                    setLoading(false);
+                }
+            }
+        };
+
+        checkInitialSession();
 
         // Escuchar cambios en la sesión (incluye carga inicial)
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (!mounted) return;
             console.log('AuthContext: [EVENT]', event, session?.user?.id);
             setSession(session);
+            
+            if (event === 'SIGNED_IN') setAuthError(null);
 
             if (session?.user) {
                 await fetchUserProfile(session.user.id);
-            } else {
+            } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
                 setUser(null);
+                localStorage.removeItem('lockin_cached_profile');
                 setLoading(false);
             }
         });
@@ -41,9 +79,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const timeout = setTimeout(() => {
             if (mounted) {
                 console.warn('AuthContext: Loading fallback timeout reached');
+                setAuthError("Conexión inestable. Intentando reconectar...");
                 setLoading(false);
             }
-        }, 8000);
+        }, 1000);
 
         return () => {
             mounted = false;
@@ -162,8 +201,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const signOut = async () => {
         try {
-            const { error } = await supabase.auth.signOut();
-            if (error) throw error;
+            await supabase.auth.signOut();
         } catch (error: any) {
             console.error('Error signing out:', error);
         } finally {
@@ -171,6 +209,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(null);
             setSession(null);
             setLoading(false);
+            setAuthError(null);
+            localStorage.removeItem('lockin_cached_profile');
         }
     };
 
@@ -204,7 +244,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signOut, updateProfile }}>
+        <AuthContext.Provider value={{ user, session, loading, authError, signUp, signIn, signOut, updateProfile }}>
             {children}
         </AuthContext.Provider>
     );

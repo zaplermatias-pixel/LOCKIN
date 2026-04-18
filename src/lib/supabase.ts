@@ -10,6 +10,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
         persistSession: true,
+        storage: window.localStorage,
         autoRefreshToken: true,
         detectSessionInUrl: true,
         // Bypass navigator.locks with correct signature: (name, timeout, fn)

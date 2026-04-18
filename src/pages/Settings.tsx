@@ -144,7 +144,7 @@ export function Settings() {
                     </CardHeader>
                     <CardContent className="flex flex-col items-center gap-6 p-8 pt-0">
                         <div className="relative group">
-                            <Avatar key={user?.profile_picture_url || 'settings-avatar'} className="h-40 w-40 border-4 border-white dark:border-dark-card shadow-2xl transition-transform duration-500 group-hover:scale-105">
+                            <Avatar key={user?.profile_picture_url || 'settings-avatar'} className="h-40 w-40 aspect-square border-4 border-white dark:border-dark-card shadow-2xl transition-transform duration-500 group-hover:scale-105">
                                 <AvatarImage src={user?.profile_picture_url || ''} />
                                 <AvatarFallback className="text-4xl bg-primary/5 dark:bg-beige/5 text-primary dark:text-beige font-black italic">
                                     {(user?.display_name?.[0] || 'U').toUpperCase()}

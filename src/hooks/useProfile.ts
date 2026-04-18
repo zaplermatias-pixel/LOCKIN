@@ -22,7 +22,7 @@ export function useProfile(userId?: string) {
             return data as User;
         },
         enabled: !!userId && userId !== 'undefined',
-        staleTime: 1000 * 60 * 2, // 2 minutos de caché fresco
+        staleTime: 1000 * 60 * 5, // 5 minutos de caché fresco para PWA
     });
 
     // Función para invalidar/recargar manualmente

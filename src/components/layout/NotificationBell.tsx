@@ -115,7 +115,7 @@ export function NotificationBell() {
                     )}
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 p-0 bg-white/95 backdrop-blur-xl border-sand/30 shadow-2xl rounded-3xl overflow-hidden" align="end">
+            <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80 p-0 bg-white/95 backdrop-blur-xl border-sand/30 shadow-2xl rounded-3xl overflow-hidden" align="end">
                 <div className="p-4 border-b border-sand/30 bg-primary/5 flex items-center justify-between">
                     <h4 className="text-xs font-black uppercase italic tracking-widest text-primary">Notificaciones</h4>
                     {unreadCount > 0 && (

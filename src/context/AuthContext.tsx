@@ -68,7 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             if (session?.user) {
                 await fetchUserProfile(session.user.id);
-            } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+            } else if (event === 'SIGNED_OUT') {
                 setUser(null);
                 localStorage.removeItem('lockin_cached_profile');
                 setLoading(false);
